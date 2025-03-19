@@ -48,7 +48,7 @@ This repository contains the code for a Telegram bot that helps manage expenses.
 1. In the Apps Script editor, go to `Project Settings` > `Script Properties`.
 2. Add the following script properties:
    - `TELEGRAM_BOT_TOKEN`: Your Telegram bot token from BotFather
-   - `GEMINI_API_KEY`: Your Google Gemini API key (if using Gemini features)
+   - `GEMINI_API_KEY`: Your Google Gemini API key (you can obtain it for free from [Google AI Studio](https://aistudio.google.com/))
    - `SHEET_ID`: The ID of your Google Spreadsheet (from the URL)
    - `MY_CHAT_ID`: Your Telegram user ID for admin access
    - `APP_URL`: The deployment URL of your Google Apps Script web app (you'll get this after deployment)
