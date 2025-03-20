@@ -37,8 +37,6 @@ const CONFIG = {
 
       if (data[i][3]) accounts.push(data[i][3]);   // Columna D: Cuentas
     }
-    Logger.log(categories);
-    Logger.log(accounts);
     return { categories, accounts };
   }
 };
