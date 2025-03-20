@@ -47,6 +47,12 @@ function doPost(e) {
       return;
     }
     
+    // Verificar si estamos en modo de edición
+    if (processEditMessage(message, chatId)) {
+      Logger.log("Edit mode message processed.");
+      return;
+    }
+    
     let structuredData;
     
     // Manejar mensajes de texto
@@ -127,10 +133,15 @@ function handleCallbackQuery(callbackQuery) {
       messageId, 
       "❌ Registro de gasto cancelado."
     );
+  } else if (callbackData.action === 'edit') {
+    // Iniciar flujo de edición
+    startEditFlow(chatId, messageId, savedData, callbackData.id);
   }
   
-  // Limpiar datos en cache
-  cache.remove(cacheKey);
+  // Solo eliminar caché si confirmó o canceló (no para edición)
+  if (callbackData.action !== 'edit') {
+    cache.remove(cacheKey);
+  }
 }
 
 /**
@@ -155,13 +166,17 @@ function sendConfirmationMessage(chatId, data, timestamp) {
   // Crear mensaje
   const message = `⚠️ <b>Confirma este gasto:</b>\n💰 ${data.amount}\n📝 ${data.description}\n🏷️ ${data.subcategory}\n💳 ${data.account}`;
   
-  // Botones de confirmar y cancelar
+  // Botones de confirmar, editar y cancelar
   const inlineKeyboard = {
     inline_keyboard: [
       [
         {
           text: "✅ Confirmar",
           callback_data: JSON.stringify({ action: 'confirm', id: expenseId })
+        },
+        {
+          text: "✏️ Editar",
+          callback_data: JSON.stringify({ action: 'edit', id: expenseId })
         },
         {
           text: "❌ Cancelar",
@@ -173,6 +188,124 @@ function sendConfirmationMessage(chatId, data, timestamp) {
   
   // Enviar mensaje con botones
   sendTelegramMessageWithButtons(chatId, message, inlineKeyboard);
+}
+
+/**
+ * Inicia el flujo de edición de un gasto
+ * @param {string} chatId - ID del chat
+ * @param {number} messageId - ID del mensaje original
+ * @param {Object} savedData - Datos del gasto guardados
+ * @param {string} expenseId - ID único del gasto
+ */
+function startEditFlow(chatId, messageId, savedData, expenseId) {
+  // Actualizar el mensaje original para indicar que está en modo edición
+  editMessageText(
+    chatId,
+    messageId,
+    `✏️ <b>Editando gasto:</b>\n💰 ${savedData.data.amount}\n📝 ${savedData.data.description}\n🏷️ ${savedData.data.subcategory}\n💳 ${savedData.data.account}\n\n<i>Por favor, envía un mensaje indicando qué quieres modificar.</i>`
+  );
+  
+  // Guardar información de que estamos en modo edición para este chat
+  const cache = CacheService.getUserCache();
+  cache.put(`edit_mode_${chatId}`, JSON.stringify({
+    expenseId: expenseId,
+    originalData: savedData
+  }), 3600); // 1 hora para completar la edición
+}
+
+/**
+ * Procesa un mensaje de edición
+ * @param {Object} message - Mensaje de Telegram
+ * @param {string} chatId - ID del chat
+ * @return {boolean} - True si se procesó como edición, false en caso contrario
+ */
+function processEditMessage(message, chatId) {
+  const cache = CacheService.getUserCache();
+  const editModeJson = cache.get(`edit_mode_${chatId}`);
+  
+  if (!editModeJson) {
+    return false; // No estamos en modo edición
+  }
+  
+  const editMode = JSON.parse(editModeJson);
+  const originalData = editMode.originalData;
+  
+  try {
+    // Procesar la edición con Gemini
+    let updatedData;
+    if (message.text) {
+      // Definir un prompt específico para edición
+      const editPrompt = `Tengo los siguientes datos de un gasto:
+      Monto: ${originalData.data.amount}
+      Descripción: ${originalData.data.description}
+      Categoría: ${originalData.data.category}
+      Subcategoría: ${originalData.data.subcategory}
+      Cuenta: ${originalData.data.account}
+      
+      El usuario quiere editar esta información y ha enviado: "${message.text}"
+      
+      Por favor, actualiza los datos según la solicitud del usuario.
+      
+      Elige una categoría y subcategoría de esta lista:
+      ${Object.entries(categories).map(([cat, subcats]) => 
+        subcats.map(subcat => `- ${cat} > ${subcat}`).join('\n      ')
+      ).join('\n      ')}
+      La subcategoría debes escribirla tal cual como aparece en la lista con el formato "Categoría > Subcategoría".
+      
+      Elige una cuenta de esta lista: ${accounts.join(', ')}. Si el usuario no especifica la cuenta, mantén la original.
+      
+      Devuelve los datos completos actualizados en formato JSON: { "amount": number, "description": string, "category": string, "subcategory": string, "account": string }`;
+      
+      updatedData = processTextWithGemini(message.text, editPrompt);
+    } else if (message.voice) {
+      const fileId = message.voice.file_id;
+      const audioBlob = getAudioBlob(fileId);
+      
+      // Definir un prompt específico para edición con audio
+      const editPrompt = `Genera una transcripción del discurso en este archivo de audio, luego actualiza los datos del gasto según lo que el usuario solicita editar.
+      
+      Datos actuales del gasto:
+      Monto: ${originalData.data.amount}
+      Descripción: ${originalData.data.description}
+      Categoría: ${originalData.data.category}
+      Subcategoría: ${originalData.data.subcategory}
+      Cuenta: ${originalData.data.account}
+      
+      Elige una categoría y subcategoría de esta lista:
+      ${Object.entries(categories).map(([cat, subcats]) => 
+        subcats.map(subcat => `- ${cat} > ${subcat}`).join('\n      ')
+      ).join('\n      ')}
+      La subcategoría debes escribirla tal cual como aparece en la lista con el formato "Categoría > Subcategoría".
+      
+      Elige una cuenta de esta lista: ${accounts.join(', ')}. Si el usuario no especifica la cuenta, mantén la original.
+      
+      Devuelve los datos completos actualizados en formato JSON: { "amount": number, "description": string, "category": string, "subcategory": string, "account": string }`;
+      
+      updatedData = processAudioWithGemini(audioBlob, message.voice.mime_type, editPrompt);
+    }
+    
+    if (validateData(updatedData)) {
+      // Guardar los datos actualizados
+      const cacheKey = `expense_${editMode.expenseId}`;
+      originalData.data = updatedData; // Actualizar los datos
+      cache.put(cacheKey, JSON.stringify(originalData), 21600); // 6 horas
+      
+      // Eliminar el estado de edición
+      cache.remove(`edit_mode_${chatId}`);
+      
+      // Enviar mensaje de confirmación con datos actualizados
+      sendConfirmationMessage(chatId, updatedData, originalData.timestamp);
+      
+      return true;
+    } else {
+      sendTelegramMessage(chatId, "❌ No pude procesar correctamente tu edición. Por favor intenta nuevamente con información más clara.");
+      return true;
+    }
+  } catch (error) {
+    logError('processEditMessage', error);
+    sendTelegramMessage(chatId, "❌ Ocurrió un error procesando tu edición. Por favor intenta de nuevo.");
+    return true;
+  }
 }
 
 /**

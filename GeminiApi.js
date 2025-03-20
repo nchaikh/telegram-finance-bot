@@ -1,8 +1,15 @@
-// Process text with Gemini API
-function processTextWithGemini(text) {
+/**
+ * Process text with Gemini API
+ * @param {string} text - Text to process
+ * @param {string} customPrompt - Optional custom prompt to use instead of the default
+ * @return {Object} - Structured data
+ */
+function processTextWithGemini(text, customPrompt) {
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
   const apiKey = CONFIG.GEMINI_API_KEY;
-  const prompt = `Extrae el monto, la descripción, la categoría y la cuenta de este mensaje de gasto.
+  
+  // Usar el prompt personalizado si se proporciona, de lo contrario usar el predeterminado
+  const prompt = customPrompt || `Extrae el monto, una descripción, la categoría, la subcategoría y la cuenta de este mensaje de gasto.
   
   Elige una categoría y subcategoría de esta lista:
   ${Object.entries(categories).map(([cat, subcats]) => 
@@ -47,8 +54,14 @@ function processTextWithGemini(text) {
   return extractedJson;
 }
 
-// Process audio with Gemini API
-function processAudioWithGemini(audioBlob, mimeType) {
+/**
+ * Process audio with Gemini API
+ * @param {Blob} audioBlob - Audio blob to process
+ * @param {string} mimeType - MIME type of the audio
+ * @param {string} customPrompt - Optional custom prompt to use instead of the default
+ * @return {Object} - Structured data
+ */
+function processAudioWithGemini(audioBlob, mimeType, customPrompt) {
   const apiKey = CONFIG.GEMINI_API_KEY;
   const uploadUrl = `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${apiKey}`;
   const generateUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
@@ -71,7 +84,8 @@ function processAudioWithGemini(audioBlob, mimeType) {
   const fileUri = uploadResult.file.uri;
 
   // Paso 2: Procesar el audio con Gemini
-  const prompt = `Genera una transcripción del discurso en este archivo de audio, luego extrae el monto, la descripción, la categoría y la cuenta del mensaje de gasto transcrito.
+  // Usar el prompt personalizado si se proporciona, de lo contrario usar el predeterminado
+  const prompt = customPrompt || `Genera una transcripción del discurso en este archivo de audio, luego extrae el monto, una descripción, la categoría, la subcategoría y la cuenta del mensaje de gasto transcrito.
   
   Elige una categoría y subcategoría de esta lista:
   ${Object.entries(categories).map(([cat, subcats]) => 
