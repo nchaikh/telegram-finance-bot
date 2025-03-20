@@ -24,10 +24,29 @@ function handleCommands(message, chatId) {
     case '/listasubcategorias':
       const categoryParam = parts.slice(1).join(' ');
       if (categoryParam.trim() === '') {
-        sendTelegramMessage(chatId, "Enviar con nombre de categoría (Ej: /listasubcategorias Vivienda)");
+        // Mostrar la lista de categorías disponibles como comandos clickeables
+        // Removemos tildes y espacios para crear comandos válidos
+        const categoriesList = Object.keys(categories).map(c => {
+          const normalizedCategory = removeDiacritics(c).replace(/\s+/g, '_');
+          return `• /ls_${normalizedCategory}`;
+        }).join('\n');
+        const message = `📋 <b>Categorías disponibles:</b>\n\n${categoriesList}\n\n<i>Seleccione una categoría tocando en la opción deseada</i>`;
+        sendTelegramMessage(chatId, message);
         return true;
       }
       listSubcategories(chatId, categoryParam);
+      return true;
+      
+    // Manejar el comando con formato de guion bajo
+    case (command.match(/^\/ls_/) || {}).input:
+      const cmdCategory = command.replace('/ls_', '').replace(/_/g, ' ');
+      // Buscar la categoría correspondiente ignorando tildes
+      const matchedCategory = findCategoryIgnoringAccents(cmdCategory);
+      if (matchedCategory) {
+        listSubcategories(chatId, matchedCategory);
+      } else {
+        sendTelegramMessage(chatId, `❌ No se encontró la categoría "${cmdCategory}"`);
+      }
       return true;
 
     case '/listacuentas':
@@ -116,10 +135,44 @@ function listSubcategories(chatId, category) {
                     categories[category].map(sc => `• ${sc}`).join('\n');
     sendTelegramMessage(chatId, message);
   } else {
-    // Categoría no encontrada
-    const availableCategories = Object.keys(categories).join('\n• ');
-    sendTelegramMessage(chatId, `❌ Categoría "${category}" no encontrada.\n\nCategorías disponibles:\n• ${availableCategories}`);
+    // Intentar encontrar la categoría ignorando tildes
+    const matchedCategory = findCategoryIgnoringAccents(category);
+    if (matchedCategory) {
+      const message = `📋 <b>Subcategorías de ${matchedCategory}:</b>\n\n` + 
+                      categories[matchedCategory].map(sc => `• ${sc}`).join('\n');
+      sendTelegramMessage(chatId, message);
+    } else {
+      // Categoría no encontrada
+      const availableCategories = Object.keys(categories).join('\n• ');
+      sendTelegramMessage(chatId, `❌ Categoría "${category}" no encontrada.\n\nCategorías disponibles:\n• ${availableCategories}`);
+    }
   }
+}
+
+/**
+ * Elimina tildes y signos diacríticos de una cadena
+ * @param {string} str - Cadena a normalizar
+ * @return {string} - Cadena sin tildes
+ */
+function removeDiacritics(str) {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+/**
+ * Encuentra una categoría ignorando tildes
+ * @param {string} searchCategory - Categoría a buscar
+ * @return {string|null} - Categoría encontrada o null
+ */
+function findCategoryIgnoringAccents(searchCategory) {
+  const normalizedSearch = removeDiacritics(searchCategory.toLowerCase());
+  
+  for (const category of Object.keys(categories)) {
+    if (removeDiacritics(category.toLowerCase()) === normalizedSearch) {
+      return category; // Devuelve la categoría original con tildes
+    }
+  }
+  
+  return null;
 }
 
 /**
