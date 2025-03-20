@@ -52,7 +52,7 @@ function validateData(data) {
   }
   
   // Validar cuenta
-  if (!accounts.includes(data.account)) {
+  if (!accounts.includes(data.account) && data.account !== 'No definido') {
     logError('validateData', new Error('Cuenta inválida'), { 
       account: data.account, 
       validAccounts: accounts 

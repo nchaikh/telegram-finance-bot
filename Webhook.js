@@ -69,7 +69,10 @@ function doPost(e) {
     // Validar los datos estructurados
     if (validateData(structuredData)) {
       // Log para pruebas
-      Logger.log(structuredData);
+      Logger.log("Generated data:" + JSON.stringify(structuredData));
+
+      // Editar descripción para que siempre comience con mayúscula
+      structuredData.description = structuredData.description.charAt(0).toUpperCase() + structuredData.description.slice(1);
       
       // En lugar de guardar directamente, enviar mensaje de confirmación
       sendConfirmationMessage(chatId, structuredData, message.date);
