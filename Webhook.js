@@ -108,6 +108,32 @@ function formatCurrency(amount) {
 }
 
 /**
+ * Obtiene la fecha formateada del gasto, ya sea desde el campo date o desde el timestamp
+ * @param {Object} data - Datos del gasto
+ * @param {number} timestamp - Timestamp UNIX del mensaje
+ * @return {string} Fecha formateada en dd/MM/yyyy
+ */
+function getFormattedDate(data, timestamp) {
+  if (data.date) {
+    return data.date;
+  } else {
+    const date = new Date(timestamp * 1000);
+    return Utilities.formatDate(date, Session.getScriptTimeZone(), "dd/MM/yyyy");
+  }
+}
+
+/**
+ * Formatea los datos del gasto para mostrarlos en un mensaje
+ * @param {Object} data - Datos del gasto
+ * @param {string} dateStr - Fecha formateada
+ * @param {string} prefix - Prefijo para el mensaje (opcional)
+ * @return {string} Mensaje formateado
+ */
+function formatExpenseForDisplay(data, dateStr, prefix = "✅ <b>Gasto registrado:</b>") {
+  return `${prefix}\n🗓️ ${dateStr}\n💰 ${formatCurrency(data.amount)}\n📝 ${data.description}\n🏷️ ${data.subcategory}\n💳 ${data.account}`;
+}
+
+/**
  * Maneja las respuestas de los botones de confirmación
  * @param {Object} callbackQuery - Objeto callback_query de Telegram
  */
@@ -135,20 +161,14 @@ function handleCallbackQuery(callbackQuery) {
     // Guardar en la hoja de cálculo
     logToExpenseSheet(savedData.data, savedData.timestamp);
     
-    // Obtener fecha formateada
-    let displayDate;
-    if (savedData.data.date) {
-      displayDate = savedData.data.date;
-    } else {
-      const date = new Date(savedData.timestamp * 1000);
-      displayDate = Utilities.formatDate(date, Session.getScriptTimeZone(), "dd/MM/yyyy");
-    }
+    // Obtener fecha formateada y actualizar el mensaje
+    const displayDate = getFormattedDate(savedData.data, savedData.timestamp);
     
     // Actualizar el mensaje original
     editMessageText(
       chatId, 
       messageId, 
-      `✅ <b>Gasto registrado:</b>\n📅 ${displayDate}\n💰 ${formatCurrency(savedData.data.amount)}\n📝 ${savedData.data.description}\n🏷️ ${savedData.data.subcategory}\n💳 ${savedData.data.account}`
+      formatExpenseForDisplay(savedData.data, displayDate)
     );
   } else if (callbackData.action === 'cancel') {
     // Actualizar el mensaje original
@@ -188,17 +208,10 @@ function sendConfirmationMessage(chatId, data, timestamp) {
   cache.put(`expense_${expenseId}`, JSON.stringify(cacheData), 21600); // 6 horas de caché
   
   // Obtener fecha formateada para mostrar
-  let displayDate;
-  if (data.date) {
-    displayDate = data.date; // Ya está en formato dd/MM/yyyy
-  } else {
-    // Formatear fecha actual en dd/mm/aaaa
-    const date = new Date(timestamp * 1000);
-    displayDate = Utilities.formatDate(date, Session.getScriptTimeZone(), "dd/MM/yyyy");
-  }
+  const displayDate = getFormattedDate(data, timestamp);
   
   // Crear mensaje
-  const message = `⚠️ <b>Confirma este gasto:</b>\n📅 ${displayDate}\n💰 ${formatCurrency(data.amount)}\n📝 ${data.description}\n🏷️ ${data.subcategory}\n💳 ${data.account}`;
+  const message = formatExpenseForDisplay(data, displayDate, "⚠️ <b>Confirma este gasto:</b>");
   
   // Botones de confirmar, editar y cancelar
   const inlineKeyboard = {
@@ -233,19 +246,14 @@ function sendConfirmationMessage(chatId, data, timestamp) {
  */
 function startEditFlow(chatId, messageId, savedData, expenseId) {
   // Obtener fecha formateada
-  let displayDate;
-  if (savedData.data.date) {
-    displayDate = savedData.data.date;
-  } else {
-    const date = new Date(savedData.timestamp * 1000);
-    displayDate = Utilities.formatDate(date, Session.getScriptTimeZone(), "dd/MM/yyyy");
-  }
+  const displayDate = getFormattedDate(savedData.data, savedData.timestamp);
   
   // Actualizar el mensaje original para indicar que está en modo edición
   editMessageText(
     chatId,
     messageId,
-    `✏️ <b>Editando gasto:</b>\n📅 ${displayDate}\n💰 ${formatCurrency(savedData.data.amount)}\n📝 ${savedData.data.description}\n🏷️ ${savedData.data.subcategory}\n💳 ${savedData.data.account}\n\n<i>Por favor, envía un mensaje indicando qué quieres modificar.</i>`
+    formatExpenseForDisplay(savedData.data, displayDate, "✏️ <b>Editando gasto:</b>") + 
+    "\n\n<i>Por favor, envía un mensaje indicando qué quieres modificar.</i>"
   );
   
   // Guardar información de que estamos en modo edición para este chat
