@@ -8,8 +8,12 @@ function processTextWithGemini(text, customPrompt) {
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
   const apiKey = CONFIG.GEMINI_API_KEY;
   
+  // Obtener la fecha actual para resolver referencias relativas
+  const today = new Date();
+  const currentDateString = Utilities.formatDate(today, Session.getScriptTimeZone(), "dd/MM/yyyy");
+  
   // Usar el prompt personalizado si se proporciona, de lo contrario usar el predeterminado
-  const prompt = customPrompt || `Extrae el monto, una descripción, la categoría, la subcategoría y la cuenta de este mensaje de gasto.
+  const prompt = customPrompt || `Extrae el monto, una descripción, la categoría, la subcategoría, la cuenta y la fecha de este mensaje de gasto.
   
   Elige una categoría y subcategoría de esta lista:
   ${Object.entries(categories).map(([cat, subcats]) => 
@@ -19,7 +23,9 @@ function processTextWithGemini(text, customPrompt) {
   
   Elige una cuenta de esta lista: ${accounts.join(', ')}. Si el usuario no especifica la cuenta, usa "No definido" por defecto.
   
-  Devuelve los datos en formato JSON como este: { "amount": number, "description": string, "category": string, "subcategory": string, "account": string }.
+  Hoy es ${currentDateString}. Si el usuario menciona una fecha (como "ayer", "el lunes", "hace 3 días", etc.), extráela y conviértela a formato dd/MM/yyyy. Si no menciona una fecha, no incluyas el campo "date" en la respuesta.
+  
+  Devuelve los datos en formato JSON como este: { "amount": number, "description": string, "category": string, "subcategory": string, "account": string, "date": string (opcional) }.
   
   Mensaje: "${text}"`;
   
@@ -66,6 +72,10 @@ function processAudioWithGemini(audioBlob, mimeType, customPrompt) {
   const uploadUrl = `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${apiKey}`;
   const generateUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
+  // Obtener la fecha actual para resolver referencias relativas
+  const today = new Date();
+  const currentDateString = Utilities.formatDate(today, Session.getScriptTimeZone(), "dd/MM/yyyy");
+
   // Paso 1: Subir el archivo de audio
   const uploadOptions = {
     method: 'POST',
@@ -85,7 +95,7 @@ function processAudioWithGemini(audioBlob, mimeType, customPrompt) {
 
   // Paso 2: Procesar el audio con Gemini
   // Usar el prompt personalizado si se proporciona, de lo contrario usar el predeterminado
-  const prompt = customPrompt || `Genera una transcripción del discurso en este archivo de audio, luego extrae el monto, una descripción, la categoría, la subcategoría y la cuenta del mensaje de gasto transcrito.
+  const prompt = customPrompt || `Genera una transcripción del discurso en este archivo de audio, luego extrae el monto, una descripción, la categoría, la subcategoría, la cuenta y la fecha del mensaje de gasto transcrito.
   
   Elige una categoría y subcategoría de esta lista:
   ${Object.entries(categories).map(([cat, subcats]) => 
@@ -95,7 +105,9 @@ function processAudioWithGemini(audioBlob, mimeType, customPrompt) {
   
   Elige una cuenta de esta lista: ${accounts.join(', ')}. Si el usuario no especifica la cuenta, usa "No definido" por defecto.
   
-  Devuelve los datos en formato JSON como este: { "amount": number, "description": string, "category": string, "subcategory": string, "account": string }.
+  Hoy es ${currentDateString}. Si el usuario menciona una fecha (como "ayer", "el lunes", "hace 3 días", etc.), extráela y conviértela a formato dd/MM/yyyy. Si no menciona una fecha, no incluyas el campo "date" en la respuesta.
+  
+  Devuelve los datos en formato JSON como este: { "amount": number, "description": string, "category": string, "subcategory": string, "account": string, "date": string (opcional) }.
   `;
 
   const payload = {

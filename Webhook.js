@@ -135,11 +135,20 @@ function handleCallbackQuery(callbackQuery) {
     // Guardar en la hoja de cálculo
     logToExpenseSheet(savedData.data, savedData.timestamp);
     
+    // Obtener fecha formateada
+    let displayDate;
+    if (savedData.data.date) {
+      displayDate = savedData.data.date;
+    } else {
+      const date = new Date(savedData.timestamp * 1000);
+      displayDate = Utilities.formatDate(date, Session.getScriptTimeZone(), "dd/MM/yyyy");
+    }
+    
     // Actualizar el mensaje original
     editMessageText(
       chatId, 
       messageId, 
-      `✅ <b>Gasto registrado:</b>\n💰 ${formatCurrency(savedData.data.amount)}\n📝 ${savedData.data.description}\n🏷️ ${savedData.data.subcategory}\n💳 ${savedData.data.account}`
+      `✅ <b>Gasto registrado:</b>\n📅 ${displayDate}\n💰 ${formatCurrency(savedData.data.amount)}\n📝 ${savedData.data.description}\n🏷️ ${savedData.data.subcategory}\n💳 ${savedData.data.account}`
     );
   } else if (callbackData.action === 'cancel') {
     // Actualizar el mensaje original
@@ -178,8 +187,18 @@ function sendConfirmationMessage(chatId, data, timestamp) {
   const cache = CacheService.getUserCache();
   cache.put(`expense_${expenseId}`, JSON.stringify(cacheData), 21600); // 6 horas de caché
   
+  // Obtener fecha formateada para mostrar
+  let displayDate;
+  if (data.date) {
+    displayDate = data.date; // Ya está en formato dd/MM/yyyy
+  } else {
+    // Formatear fecha actual en dd/mm/aaaa
+    const date = new Date(timestamp * 1000);
+    displayDate = Utilities.formatDate(date, Session.getScriptTimeZone(), "dd/MM/yyyy");
+  }
+  
   // Crear mensaje
-  const message = `⚠️ <b>Confirma este gasto:</b>\n💰 ${formatCurrency(data.amount)}\n📝 ${data.description}\n🏷️ ${data.subcategory}\n💳 ${data.account}`;
+  const message = `⚠️ <b>Confirma este gasto:</b>\n📅 ${displayDate}\n💰 ${formatCurrency(data.amount)}\n📝 ${data.description}\n🏷️ ${data.subcategory}\n💳 ${data.account}`;
   
   // Botones de confirmar, editar y cancelar
   const inlineKeyboard = {
@@ -213,11 +232,20 @@ function sendConfirmationMessage(chatId, data, timestamp) {
  * @param {string} expenseId - ID único del gasto
  */
 function startEditFlow(chatId, messageId, savedData, expenseId) {
+  // Obtener fecha formateada
+  let displayDate;
+  if (savedData.data.date) {
+    displayDate = savedData.data.date;
+  } else {
+    const date = new Date(savedData.timestamp * 1000);
+    displayDate = Utilities.formatDate(date, Session.getScriptTimeZone(), "dd/MM/yyyy");
+  }
+  
   // Actualizar el mensaje original para indicar que está en modo edición
   editMessageText(
     chatId,
     messageId,
-    `✏️ <b>Editando gasto:</b>\n💰 ${formatCurrency(savedData.data.amount)}\n📝 ${savedData.data.description}\n🏷️ ${savedData.data.subcategory}\n💳 ${savedData.data.account}\n\n<i>Por favor, envía un mensaje indicando qué quieres modificar.</i>`
+    `✏️ <b>Editando gasto:</b>\n📅 ${displayDate}\n💰 ${formatCurrency(savedData.data.amount)}\n📝 ${savedData.data.description}\n🏷️ ${savedData.data.subcategory}\n💳 ${savedData.data.account}\n\n<i>Por favor, envía un mensaje indicando qué quieres modificar.</i>`
   );
   
   // Guardar información de que estamos en modo edición para este chat
@@ -246,6 +274,10 @@ function processEditMessage(message, chatId) {
   const originalData = editMode.originalData;
   
   try {
+    // Obtener la fecha actual para el prompt de Gemini
+    const today = new Date();
+    const currentDateString = Utilities.formatDate(today, Session.getScriptTimeZone(), "dd/MM/yyyy");
+    
     // Procesar la edición con Gemini
     let updatedData;
     if (message.text) {
@@ -256,6 +288,7 @@ function processEditMessage(message, chatId) {
       Categoría: ${originalData.data.category}
       Subcategoría: ${originalData.data.subcategory}
       Cuenta: ${originalData.data.account}
+      Fecha: ${originalData.data.date || 'No especificada'}
       
       El usuario quiere editar esta información y ha enviado: "${message.text}"
       
@@ -269,7 +302,9 @@ function processEditMessage(message, chatId) {
       
       Elige una cuenta de esta lista: ${accounts.join(', ')}. Si el usuario no especifica la cuenta, mantén la original.
       
-      Devuelve los datos completos actualizados en formato JSON: { "amount": number, "description": string, "category": string, "subcategory": string, "account": string }`;
+      Hoy es ${currentDateString}. Si el usuario menciona una fecha (como "ayer", "el lunes", "hace 3 días", etc.), extráela y conviértela a formato dd/MM/yyyy. Si no menciona una fecha, mantén la original o déjala sin especificar.
+      
+      Devuelve los datos completos actualizados en formato JSON: { "amount": number, "description": string, "category": string, "subcategory": string, "account": string, "date": string (opcional) }`;
       
       updatedData = processTextWithGemini(message.text, editPrompt);
     } else if (message.voice) {

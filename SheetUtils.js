@@ -10,9 +10,15 @@ function logToExpenseSheet(data, timestamp) {
       throw new Error(`Hoja "${CONFIG.EXPENSES_SHEET_NAME}" no encontrada en la planilla`);
     }
 
-    // Formatear fecha en dd/mm/aaaa
-    const date = new Date(timestamp * 1000);
-    const formattedDate = Utilities.formatDate(date, Session.getScriptTimeZone(), "dd/MM/yyyy");
+    // Usar la fecha proporcionada por el usuario si está disponible, de lo contrario usar timestamp
+    let formattedDate;
+    if (data.date) {
+      formattedDate = data.date; // Ya está en formato dd/MM/yyyy
+    } else {
+      // Formatear fecha en dd/mm/aaaa desde el timestamp
+      const date = new Date(timestamp * 1000);
+      formattedDate = Utilities.formatDate(date, Session.getScriptTimeZone(), "dd/MM/yyyy");
+    }
 
     // Asegurar que el amount sea negativo
     const amount = Math.abs(data.amount) * -1;

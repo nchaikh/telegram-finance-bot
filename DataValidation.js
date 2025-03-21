@@ -60,5 +60,22 @@ function validateData(data) {
     return false;
   }
   
+  // Validar fecha si está presente
+  if ('date' in data && data.date) {
+    const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
+    if (!dateRegex.test(data.date)) {
+      logError('validateData', new Error('Formato de fecha inválido'), { date: data.date });
+      return false;
+    }
+    
+    // Verificar que la fecha sea válida
+    const [day, month, year] = data.date.split('/').map(Number);
+    const dateObj = new Date(year, month - 1, day);
+    if (isNaN(dateObj.getTime()) || dateObj.getDate() !== day || dateObj.getMonth() !== month - 1 || dateObj.getFullYear() !== year) {
+      logError('validateData', new Error('Fecha inválida'), { date: data.date });
+      return false;
+    }
+  }
+  
   return true;
 }
