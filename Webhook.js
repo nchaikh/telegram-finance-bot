@@ -96,6 +96,18 @@ function doPost(e) {
 }
 
 /**
+ * Formatea un número como moneda con $ al inicio, puntos para miles y comas para decimales
+ * @param {number} amount - Monto a formatear
+ * @return {string} Monto formateado
+ */
+function formatCurrency(amount) {
+  return '$' + amount.toLocaleString('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+/**
  * Maneja las respuestas de los botones de confirmación
  * @param {Object} callbackQuery - Objeto callback_query de Telegram
  */
@@ -127,7 +139,7 @@ function handleCallbackQuery(callbackQuery) {
     editMessageText(
       chatId, 
       messageId, 
-      `✅ <b>Gasto registrado:</b>\n💰 ${savedData.data.amount}\n📝 ${savedData.data.description}\n🏷️ ${savedData.data.subcategory}\n💳 ${savedData.data.account}`
+      `✅ <b>Gasto registrado:</b>\n💰 ${formatCurrency(savedData.data.amount)}\n📝 ${savedData.data.description}\n🏷️ ${savedData.data.subcategory}\n💳 ${savedData.data.account}`
     );
   } else if (callbackData.action === 'cancel') {
     // Actualizar el mensaje original
@@ -167,7 +179,7 @@ function sendConfirmationMessage(chatId, data, timestamp) {
   cache.put(`expense_${expenseId}`, JSON.stringify(cacheData), 21600); // 6 horas de caché
   
   // Crear mensaje
-  const message = `⚠️ <b>Confirma este gasto:</b>\n💰 ${data.amount}\n📝 ${data.description}\n🏷️ ${data.subcategory}\n💳 ${data.account}`;
+  const message = `⚠️ <b>Confirma este gasto:</b>\n💰 ${formatCurrency(data.amount)}\n📝 ${data.description}\n🏷️ ${data.subcategory}\n💳 ${data.account}`;
   
   // Botones de confirmar, editar y cancelar
   const inlineKeyboard = {
@@ -205,7 +217,7 @@ function startEditFlow(chatId, messageId, savedData, expenseId) {
   editMessageText(
     chatId,
     messageId,
-    `✏️ <b>Editando gasto:</b>\n💰 ${savedData.data.amount}\n📝 ${savedData.data.description}\n🏷️ ${savedData.data.subcategory}\n💳 ${savedData.data.account}\n\n<i>Por favor, envía un mensaje indicando qué quieres modificar.</i>`
+    `✏️ <b>Editando gasto:</b>\n💰 ${formatCurrency(savedData.data.amount)}\n📝 ${savedData.data.description}\n🏷️ ${savedData.data.subcategory}\n💳 ${savedData.data.account}\n\n<i>Por favor, envía un mensaje indicando qué quieres modificar.</i>`
   );
   
   // Guardar información de que estamos en modo edición para este chat
