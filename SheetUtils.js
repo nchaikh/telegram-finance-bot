@@ -23,18 +23,10 @@ function logToExpenseSheet(data, timestamp) {
     // Asegurar que el amount sea negativo
     const amount = Math.abs(data.amount) * -1;
 
-    // Reemplazo de cuenta
-    let account = data.account;
-    if (account.toLowerCase().includes("visa")) {
-      account = "ICBC Visa Gold";
-    } else if (account.toLowerCase().includes("mastercard")) {
-      account = "ICBC Mastercard";
-    }
-
     // Insertar datos en la última fila
     const lastRow = sheet.getLastRow() + 1;
     sheet.getRange(lastRow, 1, 1, 10).setValues([
-      [formattedDate, amount, account, data.category, data.subcategory, data.description, "", amount, "Gastos", "ARS"]
+      [formattedDate, amount, data.account, data.category, data.subcategory, data.description, "", amount, "Gastos", "ARS"]
     ]);
 
     // Agregar fórmulas en las columnas K y L
