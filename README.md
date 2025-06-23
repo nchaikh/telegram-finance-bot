@@ -113,10 +113,6 @@ Open Telegram and start a chat with your bot. The bot is restricted to your chat
   - `/listacategorias` - View available expense categories
   - `/listasubcategorias [categoría]` - View subcategories for a specific category
   - `/listacuentas` - View available accounts
-  - `/agregarcategoria [nombre]` - Add a new category
-  - `/agregarcuenta [nombre]` - Add a new account
-  - `/borrarcategoria [nombre]` - Delete a category
-  - `/borrarcuenta [nombre]` - Delete an account
   - `/ayuda` - Display help information
 
 After successfully processing your expense, the bot will confirm with a message showing the amount, description, category, and account.
