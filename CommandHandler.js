@@ -100,12 +100,16 @@ function handleCommands(message, chatId) {
 function reloadConfig(chatId) {
   try {
     const configData = CONFIG.loadConfigData();
-    // Actualizar variables globales
-    categories.length = 0;
+    
+    // Limpiar las variables globales
+    Object.keys(categories).forEach(key => delete categories[key]);
     accounts.length = 0;
     
     // Agregar nuevos elementos
-    configData.categories.forEach(c => categories.push(c));
+    Object.keys(configData.categories).forEach(category => {
+      categories[category] = [...configData.categories[category]];
+    });
+    
     configData.accounts.forEach(a => accounts.push(a));
     
     sendTelegramMessage(chatId, "✅ Configuración recargada exitosamente");
