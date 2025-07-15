@@ -19,7 +19,8 @@ const CONFIG = {
 
     const data = sheet.getDataRange().getValues();
     const accounts = [];
-    const categories = {};  // Diccionario para categorías y subcategorías
+    const expense_categories = {};
+    const income_categories = {};
 
     // Leer columnas (ignorar la primera fila que es el encabezado)
     for (let i = 1; i < data.length; i++) {
@@ -29,19 +30,27 @@ const CONFIG = {
 
       // Si la categoría existe, añadir la subcategoría a la lista de subcategorías
       if (category && subcategory && type === "Gastos") {
-        if (!categories[category]) {
-          categories[category] = [];  // Inicializamos el array si la categoría no existe
+        if (!expense_categories[category]) {
+          expense_categories[category] = [];  // Inicializamos el array si la categoría no existe
         }
-        categories[category].push(subcategory);  // Agregamos la subcategoría a la lista correspondiente
+        expense_categories[category].push(subcategory);  // Agregamos la subcategoría a la lista correspondiente
       }
+      if (type === "Ingresos" && category && subcategory) {
+        if (!income_categories[category]) {
+          income_categories[category] = [];  // Inicializamos el array si la categoría no existe
+        }
+        income_categories[category].push(subcategory);  // Agregamos la subcategoría a la lista correspondiente
+      }
+
 
       if (data[i][3]) accounts.push(data[i][3]);   // Columna D: Cuentas
     }
-    return { categories, accounts };
+    return { income_categories, expense_categories, accounts };
   }
 };
 
 // Cargar las categorías y cuentas desde la configuración
 const configData = CONFIG.loadConfigData();
-const categories = configData.categories;
+const income_categories = configData.income_categories;
+const expense_categories = configData.expense_categories;
 const accounts = configData.accounts;

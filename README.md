@@ -1,32 +1,37 @@
-# Telegram Expenses Bot
+# Telegram Financial Records Bot
 
-This repository contains the code for a Telegram bot that helps manage expenses. The bot is designed to be deployed using Google Apps Script and integrates with Google Sheets to store and organize your expense data.
+This repository contains the code for a Telegram bot that helps manage your personal finances. The bot is designed to be deployed using Google Apps Script and integrates with Google Sheets to store and organize your financial data including expenses, income, and transfers.
 
 ## Features
 
-- Track and manage expenses via Telegram using text or voice messages
-- AI-powered expense processing using Google Gemini API
-- Automatic categorization of expenses
-- Easy configuration through Google Sheets
-- Dynamic management of categories and accounts
-- Secure usage limited to authorized users
-- Detailed error logging for troubleshooting
+- **Track multiple types of financial records** via Telegram using text or voice messages:
+  - 💸 **Expenses**: Money going out of your accounts
+  - 💰 **Income**: Money coming into your accounts
+  - 🔄 **Transfers**: Money moving between your accounts
+- **AI-powered processing** using Google Gemini API for natural language understanding
+- **Automatic categorization** of expenses and income
+- **Installment support** for expenses with multiple payments (cuotas)
+- **Interactive confirmation** with edit, confirm, and cancel options
+- **Easy configuration** through Google Sheets
+- **Dynamic management** of categories and accounts
+- **Secure usage** limited to authorized users
+- **Detailed error logging** for troubleshooting
 
 ## Prerequisites
 
 - A Telegram account
 - Google account to use Google Apps Script and Google Sheets
-- Google Gemini API key for AI-powered expense processing
+- Google Gemini API key for AI-powered financial data processing
 
 ## Project Structure
 
 - `Config.js`: Environment variables and configuration management
 - `CommandHandler.js`: Telegram bot command processing
-- `DataValidation.js`: Validation logic for expense data
+- `DataValidation.js`: Validation logic for financial data (expenses, income, transfers)
 - `GeminiApi.js`: Integration with Google Gemini for AI processing
-- `SheetUtils.js`: Google Sheets operations
+- `SheetUtils.js`: Google Sheets operations with support for multiple record types
 - `TelegramApi.js`: Telegram API communication
-- `Webhook.js`: Webhook handling for Telegram updates
+- `Webhook.js`: Webhook handling for Telegram updates with interactive confirmations
 
 ## Getting Started
 
@@ -57,25 +62,30 @@ This repository contains the code for a Telegram bot that helps manage expenses.
 
 1. Create a new Google Spreadsheet.
 2. Add the following sheets:
-   - `Registros`: For storing expense records
-   - `Categorías y subcategorías`: For configuring expense categories and accounts
+   - `Registros`: For storing all financial records (expenses, income, transfers)
+   - `Categorías y subcategorías`: For configuring categories and accounts
    - `Bot Errors`: For logging errors
 
 3. Configure the "Categorías y subcategorías" sheet with these columns:
-   - Column A: Tipo (Type) - e.g., "Gastos" (Expenses)
+   - Column A: Tipo (Type) - e.g., "Gastos" (Expenses), "Ingresos" (Income)
    - Column B: Categorías (Categories)
    - Column C: Subcategorías (Subcategories)
    - Column D: Cuentas (Accounts)
 
-   Add your desired expense categories, subcategories, and accounts. The "Tipo" column should contain "Gastos" for expense categories.
+   Add your desired categories for both expenses and income. The "Tipo" column should contain:
+   - "Gastos" for expense categories
+   - "Ingresos" for income categories
 
-4. The "Registros" sheet will store expenses with the following structure:
+4. The "Registros" sheet will store all financial records with the following structure:
    - Date
-   - Amount (negative for expenses)
-   - Account
+   - Amount (negative for expenses, positive for income and transfers)
+   - Account (source account)
+   - Second Account (destination account for transfers)
    - Category
    - Subcategory
    - Description
+   - Type (gasto/ingreso/transferencia)
+   - Installments (for expenses with multiple payments)
    - Additional data fields and formulas for reporting
 
 ### 5. Deploy the Script
@@ -101,30 +111,78 @@ This repository contains the code for a Telegram bot that helps manage expenses.
 Open Telegram and start a chat with your bot. The bot is restricted to your chat ID (set in `MY_CHAT_ID`). You can use the following features:
 
 - **Direct Text Messages**:
-  Send a text message with expense information, and the bot will use Gemini to extract the expense details.
-  Example: "50 euros for dinner at a restaurant"
+  Send a text message with financial information, and the bot will use Gemini to extract the details.
+  
+  **Examples**:
+  - Expenses: "50 euros for dinner at a restaurant", "Paid 1000 pesos for rent in 12 installments"
+  - Income: "Received 5000 salary from work", "Got 500 from freelance project"
+  - Transfers: "Transferred 2000 from savings to checking account"
 
 - **Voice Messages**:
-  Send a voice message describing your expense, and the bot will process it to extract the expense details.
-  Example: Record a message saying "I spent 30 dollars on gas yesterday"
+  Send a voice message describing your financial record, and the bot will process it.
+  
+  **Examples**:
+  - Record a message saying "I spent 30 dollars on gas yesterday"
+  - Record a message saying "I received my monthly salary of 3000 dollars"
+  - Record a message saying "I moved 500 euros from my main account to savings"
+
+- **Interactive Confirmations**:
+  After processing your message, the bot will show a confirmation with three options:
+  - ✅ **Confirm**: Save the record to your spreadsheet
+  - ✏️ **Edit**: Modify any field before saving
+  - ❌ **Cancel**: Discard the record
 
 - **Configuration Commands**:
   - `/reload` - Reload configuration from spreadsheet
-  - `/listacategorias` - View available expense categories
+  - `/listacategorias` - View available categories (expenses and income)
   - `/listasubcategorias [categoría]` - View subcategories for a specific category
   - `/listacuentas` - View available accounts
   - `/ayuda` - Display help information
 
-After successfully processing your expense, the bot will confirm with a message showing the amount, description, category, and account.
+The bot intelligently recognizes different types of financial records and categorizes them automatically based on your message content.
 
-## Expense Recording Details
+## Financial Record Processing Details
 
-When you send an expense message, the bot:
+When you send a message, the bot:
 
-1. Uses Gemini AI to extract expense amount, description, category, and account
-2. Records the expense with a negative amount in your spreadsheet
-3. Automatically sorts expenses by date in descending order
-4. Validates that the expense has all required fields before recording
+1. Uses Gemini AI to extract the financial information including:
+   - **Type**: Automatically determines if it's an expense, income, or transfer
+   - **Amount**: Extracts the monetary value
+   - **Description**: Understands what the transaction is for
+   - **Category & Subcategory**: Automatically categorizes based on your configured categories
+   - **Account**: Identifies which account is involved (and destination for transfers)
+   - **Installments**: Recognizes if an expense is paid in multiple installments
+   - **Date**: Processes relative dates like "yesterday", "last week", etc.
+
+2. Shows an interactive confirmation message with options to confirm, edit, or cancel
+
+3. Records the transaction in your spreadsheet with proper formatting:
+   - **Expenses**: Negative amounts, supports installment tracking
+   - **Income**: Positive amounts
+   - **Transfers**: Creates linked records for both source and destination accounts
+
+4. Automatically sorts records by date in descending order
+
+5. Validates that all required fields are present before recording
+
+## Record Types Supported
+
+### 💸 Expenses (Gastos)
+- Supports installment payments (cuotas)
+- Automatically assigned negative amounts
+- Full category and subcategory support
+- Examples: groceries, rent, utilities, entertainment
+
+### 💰 Income (Ingresos)
+- Automatically assigned positive amounts
+- Category and subcategory support for income types
+- Examples: salary, freelance work, investments, gifts
+
+### 🔄 Transfers (Transferencias)
+- Moves money between your accounts
+- Requires both source and destination accounts
+- Maintains account balance integrity
+- Examples: savings to checking, cash to bank account
 
 ## Troubleshooting
 
@@ -132,6 +190,9 @@ When you send an expense message, the bot:
 - Make sure your Telegram chat ID matches the one in script properties
 - Verify that your webhook is properly set up by running the setWebhook function again
 - For voice messages, ensure that the correct MIME type is being processed
+- If validation fails, check that your categories and accounts are properly configured in the spreadsheet
+- For transfer records, make sure both source and destination accounts exist in your configuration
+- If installment processing fails, ensure the installment number is reasonable (1-60)
 
 ## Contributing
 

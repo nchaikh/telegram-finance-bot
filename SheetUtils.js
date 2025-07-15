@@ -11,27 +11,31 @@ function logToExpenseSheet(data, timestamp) {
     }
 
     // Usar la fecha proporcionada por el usuario si está disponible, de lo contrario usar timestamp
-    let formattedDate;
+    let baseDate;
     if (data.date) {
-      formattedDate = data.date; // Ya está en formato dd/MM/yyyy
+      // Convertir fecha dd/MM/yyyy a objeto Date
+      const [day, month, year] = data.date.split('/').map(Number);
+      baseDate = new Date(year, month - 1, day);
     } else {
-      // Formatear fecha en dd/mm/aaaa desde el timestamp
-      const date = new Date(timestamp * 1000);
-      formattedDate = Utilities.formatDate(date, Session.getScriptTimeZone(), "dd/MM/yyyy");
+      baseDate = new Date(timestamp * 1000);
     }
 
-    // Asegurar que el amount sea negativo
-    const amount = Math.abs(data.amount) * -1;
+    // Determinar el tipo de registro en la columna I
+    const recordType = data.type === 'gasto' ? 'Gastos' : 
+                      data.type === 'ingreso' ? 'Ingresos' : 
+                      'Transferencias';
 
-    // Insertar datos en la última fila
-    const lastRow = sheet.getLastRow() + 1;
-    sheet.getRange(lastRow, 1, 1, 10).setValues([
-      [formattedDate, amount, data.account, data.category, data.subcategory, data.description, "", amount, "Gastos", "ARS"]
-    ]);
-
-    // Agregar fórmulas en las columnas K y L
-    sheet.getRange(lastRow, 11).setFormulaR1C1("=AND(RC1 >= 'Estadísticas'!R1C2; RC1 <= 'Estadísticas'!R2C2)");
-    sheet.getRange(lastRow, 12).setFormulaR1C1('=TEXT(RC1; "YYYY-MM")');
+    // Manejar según el tipo de registro
+    if (data.type === 'transferencia') {
+      // Transferencia: crear dos registros
+      createTransferRecords(sheet, data, baseDate, recordType);
+    } else if (data.type === 'gasto' && data.installments && data.installments > 1) {
+      // Gasto con cuotas: crear un registro por cuota
+      createInstallmentRecords(sheet, data, baseDate, recordType);
+    } else {
+      // Registro simple: gasto sin cuotas o ingreso
+      createSimpleRecord(sheet, data, baseDate, recordType);
+    }
 
     // Ordenar la hoja por la fecha (columna 1) en orden descendente
     const range = sheet.getDataRange();
@@ -41,6 +45,101 @@ function logToExpenseSheet(data, timestamp) {
     logError('logToExpenseSheet', error);
     throw error;
   }
+}
+
+/**
+ * Crea registros para transferencias (registro negativo origen + registro positivo destino)
+ * @param {Sheet} sheet - Hoja de cálculo
+ * @param {Object} data - Datos del registro
+ * @param {Date} baseDate - Fecha base del registro
+ * @param {string} recordType - Tipo de registro
+ */
+function createTransferRecords(sheet, data, baseDate, recordType) {
+  const formattedDate = Utilities.formatDate(baseDate, Session.getScriptTimeZone(), "dd/MM/yyyy");
+  const amount = Math.abs(data.amount);
+  
+  // Registro negativo para cuenta origen
+  const lastRow1 = sheet.getLastRow() + 1;
+  sheet.getRange(lastRow1, 1, 1, 10).setValues([
+    [formattedDate, -amount, data.account, "", "", 
+     `Transferencia a ${data.second_account}`, "", -amount, recordType, "ARS"]
+  ]);
+  
+  // Agregar fórmulas en las columnas K y L
+  sheet.getRange(lastRow1, 11).setFormulaR1C1("=AND(RC1 >= 'Estadísticas'!R1C2; RC1 <= 'Estadísticas'!R2C2)");
+  sheet.getRange(lastRow1, 12).setFormulaR1C1('=TEXT(RC1; "YYYY-MM")');
+  
+  // Registro positivo para cuenta destino
+  const lastRow2 = sheet.getLastRow() + 1;
+  sheet.getRange(lastRow2, 1, 1, 10).setValues([
+    [formattedDate, amount, data.second_account, "", "", 
+     `Transferencia de ${data.account}`, "", amount, recordType, "ARS"]
+  ]);
+  
+  // Agregar fórmulas en las columnas K y L
+  sheet.getRange(lastRow2, 11).setFormulaR1C1("=AND(RC1 >= 'Estadísticas'!R1C2; RC1 <= 'Estadísticas'!R2C2)");
+  sheet.getRange(lastRow2, 12).setFormulaR1C1('=TEXT(RC1; "YYYY-MM")');
+}
+
+/**
+ * Crea registros para gastos en cuotas (un registro por cuota)
+ * @param {Sheet} sheet - Hoja de cálculo
+ * @param {Object} data - Datos del registro
+ * @param {Date} baseDate - Fecha base del registro
+ * @param {string} recordType - Tipo de registro
+ */
+function createInstallmentRecords(sheet, data, baseDate, recordType) {
+  const totalAmount = Math.abs(data.amount);
+  const installments = parseInt(data.installments);
+  const monthlyAmount = totalAmount / installments;
+  
+  // Crear un registro por cada cuota
+  for (let i = 0; i < installments; i++) {
+    // Calcular la fecha de cada cuota (mes siguiente para cada cuota)
+    const installmentDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, baseDate.getDate());
+    const formattedDate = Utilities.formatDate(installmentDate, Session.getScriptTimeZone(), "dd/MM/yyyy");
+    
+    // Descripción con información de cuota
+    const description = `${data.description} (Cuota ${i + 1}/${installments})`;
+    
+    const lastRow = sheet.getLastRow() + 1;
+    sheet.getRange(lastRow, 1, 1, 10).setValues([
+      [formattedDate, -monthlyAmount, data.account, data.category, data.subcategory, 
+       description, "", -monthlyAmount, recordType, "ARS"]
+    ]);
+    
+    // Agregar fórmulas en las columnas K y L
+    sheet.getRange(lastRow, 11).setFormulaR1C1("=AND(RC1 >= 'Estadísticas'!R1C2; RC1 <= 'Estadísticas'!R2C2)");
+    sheet.getRange(lastRow, 12).setFormulaR1C1('=TEXT(RC1; "YYYY-MM")');
+  }
+}
+
+/**
+ * Crea un registro simple (gasto sin cuotas o ingreso)
+ * @param {Sheet} sheet - Hoja de cálculo
+ * @param {Object} data - Datos del registro
+ * @param {Date} baseDate - Fecha base del registro
+ * @param {string} recordType - Tipo de registro
+ */
+function createSimpleRecord(sheet, data, baseDate, recordType) {
+  const formattedDate = Utilities.formatDate(baseDate, Session.getScriptTimeZone(), "dd/MM/yyyy");
+  
+  // Determinar el signo del monto según el tipo
+  let amount = Math.abs(data.amount);
+  if (data.type === 'gasto') {
+    amount = -amount; // Gastos son negativos
+  }
+  // Los ingresos quedan positivos
+  
+  const lastRow = sheet.getLastRow() + 1;
+  sheet.getRange(lastRow, 1, 1, 10).setValues([
+    [formattedDate, amount, data.account, data.category, data.subcategory, 
+     data.description, "", amount, recordType, "ARS"]
+  ]);
+  
+  // Agregar fórmulas en las columnas K y L
+  sheet.getRange(lastRow, 11).setFormulaR1C1("=AND(RC1 >= 'Estadísticas'!R1C2; RC1 <= 'Estadísticas'!R2C2)");
+  sheet.getRange(lastRow, 12).setFormulaR1C1('=TEXT(RC1; "YYYY-MM")');
 }
 
 /**
