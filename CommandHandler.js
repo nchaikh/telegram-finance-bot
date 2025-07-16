@@ -13,46 +13,60 @@ function handleCommands(message, chatId) {
   const command = parts[0].toLowerCase();
   
   switch (command) {
-    case '/categorias':
-      listCategories(chatId);
+    case '/categorias_gastos': {
+      const { expense_categories } = CONFIG.loadConfigData();
+      let msg = '<b>Categorías de gastos:</b>\n';
+      for (const cat in expense_categories) {
+        msg += `• <b>${cat}</b>\n`;
+      }
+      sendTelegramMessage(chatId, msg, { parse_mode: 'HTML' });
       return true;
-    
-    case '/subcategorias':
+    }
+    case '/categorias_ingresos': {
+      const { income_categories } = CONFIG.loadConfigData();
+      let msg = '<b>Categorías de ingresos:</b>\n';
+      for (const cat in income_categories) {
+        msg += `• <b>${cat}</b>\n`;
+      }
+      sendTelegramMessage(chatId, msg, { parse_mode: 'HTML' });
+      return true;
+    }
+    case '/subcategorias': {
+      const { expense_categories, income_categories } = CONFIG.loadConfigData();
+      const allCategories = { ...expense_categories, ...income_categories };
       const categoryParam = parts.slice(1).join(' ');
       if (categoryParam.trim() === '') {
         // Mostrar la lista de categorías disponibles como comandos clickeables
-        // Removemos tildes y espacios para crear comandos válidos
-        const categoriesList = Object.keys(categories).map(c => {
+        const categoriesList = Object.keys(allCategories).map(c => {
           const normalizedCategory = removeDiacritics(c).replace(/\s+/g, '_');
           return `• /ls_${normalizedCategory}`;
         }).join('\n');
         const message = `📋 <b>Categorías disponibles:</b>\n\n${categoriesList}\n\n<i>Seleccione una categoría tocando en la opción deseada</i>`;
-        sendTelegramMessage(chatId, message);
+        sendTelegramMessage(chatId, message, { parse_mode: 'HTML' });
         return true;
       }
-      listSubcategories(chatId, categoryParam);
+      listSubcategories(chatId, categoryParam, allCategories);
       return true;
-      
+    }
     // Manejar el comando con formato de guion bajo
-    case (command.match(/^\/ls_/) || {}).input:
+    case (command.match(/^\/ls_/) || {}).input: {
+      const { expense_categories, income_categories } = CONFIG.loadConfigData();
+      const allCategories = { ...expense_categories, ...income_categories };
       const cmdCategory = command.replace('/ls_', '').replace(/_/g, ' ');
-      // Buscar la categoría correspondiente ignorando tildes
-      const matchedCategory = findCategoryIgnoringAccents(cmdCategory);
+      const matchedCategory = findCategoryIgnoringAccents(cmdCategory, allCategories);
       if (matchedCategory) {
-        listSubcategories(chatId, matchedCategory);
+        listSubcategories(chatId, matchedCategory, allCategories);
       } else {
         sendTelegramMessage(chatId, `❌ No se encontró la categoría "${cmdCategory}"`);
       }
       return true;
-
+    }
     case '/cuentas':
       listAccounts(chatId);
       return true;
-      
     case '/ayuda':
       sendHelpMessage(chatId);
       return true;
-      
     default:
       return false;
   }
@@ -61,32 +75,21 @@ function handleCommands(message, chatId) {
 /**
  * Lista las categorías
  */
-function listCategories(chatId) {
-  const message = `📋 <b>Categorías disponibles:</b>\n\n` + Object.keys(categories).map(c => `• ${c}`).join('\n');
-  sendTelegramMessage(chatId, message);
-}
-
-/**
- * Lista las subcategorías de una categoría específica
- * @param {string} chatId - ID del chat
- * @param {string} category - Categoría para mostrar subcategorías
- */
-function listSubcategories(chatId, category) {
-  if (categories[category]) {
-    // Mostrar subcategorías de la categoría especificada
+// Lista las subcategorías de una categoría específica (gastos o ingresos)
+function listSubcategories(chatId, category, allCategories) {
+  if (allCategories[category]) {
     const message = `📋 <b>Subcategorías de ${category}:</b>\n\n` + 
-                    categories[category].map(sc => `• ${sc}`).join('\n');
-    sendTelegramMessage(chatId, message);
+                    allCategories[category].map(sc => `• ${sc}`).join('\n');
+    sendTelegramMessage(chatId, message, { parse_mode: 'HTML' });
   } else {
     // Intentar encontrar la categoría ignorando tildes
-    const matchedCategory = findCategoryIgnoringAccents(category);
+    const matchedCategory = findCategoryIgnoringAccents(category, allCategories);
     if (matchedCategory) {
       const message = `📋 <b>Subcategorías de ${matchedCategory}:</b>\n\n` + 
-                      categories[matchedCategory].map(sc => `• ${sc}`).join('\n');
-      sendTelegramMessage(chatId, message);
+                      allCategories[matchedCategory].map(sc => `• ${sc}`).join('\n');
+      sendTelegramMessage(chatId, message, { parse_mode: 'HTML' });
     } else {
-      // Categoría no encontrada
-      const availableCategories = Object.keys(categories).join('\n• ');
+      const availableCategories = Object.keys(allCategories).join('\n• ');
       sendTelegramMessage(chatId, `❌ Categoría "${category}" no encontrada.\n\nCategorías disponibles:\n• ${availableCategories}`);
     }
   }
@@ -106,15 +109,13 @@ function removeDiacritics(str) {
  * @param {string} searchCategory - Categoría a buscar
  * @return {string|null} - Categoría encontrada o null
  */
-function findCategoryIgnoringAccents(searchCategory) {
+function findCategoryIgnoringAccents(searchCategory, allCategories) {
   const normalizedSearch = removeDiacritics(searchCategory.toLowerCase());
-  
-  for (const category of Object.keys(categories)) {
+  for (const category of Object.keys(allCategories)) {
     if (removeDiacritics(category.toLowerCase()) === normalizedSearch) {
-      return category; // Devuelve la categoría original con tildes
+      return category;
     }
   }
-  
   return null;
 }
 
@@ -132,7 +133,8 @@ function listAccounts(chatId) {
 function sendHelpMessage(chatId) {
   const message = `🤖 Comandos disponibles:
 
-/categorias - Ver categorías disponibles
+/categorias_gastos - Ver categorías de gastos
+/categorias_ingresos - Ver categorías de ingresos
 /subcategorias [categoría] - Ver subcategorías de una categoría
 /cuentas - Ver cuentas disponibles
 /ayuda - Ver esta ayuda`;
