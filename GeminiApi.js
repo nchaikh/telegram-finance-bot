@@ -14,32 +14,28 @@ function processTextWithGemini(text, customPrompt) {
   
   // Usar el prompt personalizado si se proporciona, de lo contrario usar el predeterminado
   const prompt = customPrompt || `
-### CONTEXTO:
-Hoy es ${currentDateString}. Analiza el siguiente mensaje para extraer información financiera.
-
 ### TAREA:
-Extrae y estructura la información de registro financiero en formato JSON.
+Analiza el siguiente mensaje para extraer información financiera.
 
-### TIPOS DE REGISTRO:
-- **GASTO**: Dinero que sale de una cuenta
-- **INGRESO**: Dinero que entra a una cuenta  
-- **TRANSFERENCIA**: Dinero que se mueve entre cuentas
-
-### CAMPOS REQUERIDOS:
-- **type**: "gasto", "ingreso", o "transferencia"
-- **amount**: número positivo (sin símbolos de moneda)
-- **description**: descripción clara del movimiento
-- **category**: categoría principal
-- **subcategory**: subcategoría en formato "Categoría > Subcategoría"
-- **account**: cuenta principal del movimiento
-- **second_account**: (solo transferencias) cuenta destino
-- **date**: formato dd/MM/yyyy (solo si se menciona explícitamente)
-- **installments**: número de cuotas (solo si se menciona explícitamente)
+### INFORMACIÓN A EXTRAER:
+- **tipo**: "gasto", "ingreso", o "transferencia"
+- **monto**: número positivo (sin símbolos de moneda)
+- **descripcion**: descripción del movimiento
+- **categoria**: categoría principal
+- **subcategoria**: formato "Categoría > Subcategoría"
+- **cuenta**: cuenta utilizada
+- **cuenta_destino**: (solo transferencias)
+- **fecha**: formato dd/MM/yyyy
+- **cuotas**: número de cuotas (opcional: solo si se menciona)
 
 ### REGLAS DE FECHA:
+- Si no se menciona fecha, poner la fecha actual: ${currentDateString}.
 - Si menciona "ayer" → calcular fecha anterior
 - Si menciona "el lunes", "hace 3 días", etc. → calcular fecha específica
-- Si NO menciona fecha → NO incluir el campo "date"
+
+### REGLAS DE CUOTAS:
+- Si menciona cuotas → poner un valor del 1 al 60
+- Si no se mencionan cuotas → no incluir el campo "cuotas"
 
 ### CUENTAS DISPONIBLES:
 ${accounts.join(', ')}
@@ -59,17 +55,10 @@ ${Object.entries(income_categories).map(([cat, subcats]) =>
 - La subcategoría debe devolverse en formato "Categoría > Subcategoría"
 - Ejemplo: Si eliges "Nafta" de la categoría "Auto", devuelve "Auto > Nafta"
 
-### VALIDACIONES:
-- Monto debe ser número positivo
-- Subcategoría debe existir en las listas proporcionadas
-- Fecha debe estar en formato dd/MM/yyyy
-- Para transferencias, incluir both account y second_account
-- Cuotas debe ser número entero positivo (mayor a 1)
-
 ### MENSAJE A PROCESAR:
 "${text}"
 
-### RESPUESTA REQUERIDA:
+### RESPUESTA:
 Devuelve ÚNICAMENTE un JSON válido con los campos extraídos.`;
   
   const payload = {
@@ -140,26 +129,31 @@ function processAudioWithGemini(audioBlob, mimeType, customPrompt) {
   // Usar el prompt personalizado si se proporciona, de lo contrario usar el predeterminado
   const prompt = customPrompt || `
 ### TAREA:
-1. Transcribe el audio completo con máxima precisión
-2. Extrae información financiera de la transcripción
-
-### CONTEXTO:
-Hoy es ${currentDateString}. Analiza el mensaje de voz para extraer información de registro financiero.
+Analiza el mensaje de voz para extraer información de registro financiero.
 
 ### INFORMACIÓN A EXTRAER:
-- **type**: "gasto", "ingreso", o "transferencia"
-- **amount**: número positivo (ignorar símbolos de moneda)
-- **description**: descripción del movimiento
-- **category**: categoría principal
-- **subcategory**: formato "Categoría > Subcategoría"
-- **account**: cuenta utilizada
-- **second_account**: (solo transferencias) cuenta destino
-- **date**: formato dd/MM/yyyy (solo si se menciona)
-- **installments**: número de cuotas (solo si se menciona)
+- **tipo**: "gasto", "ingreso", o "transferencia"
+- **monto**: número positivo (ignorar símbolos de moneda)
+- **descripcion**: descripción del movimiento
+- **categoria**: categoría principal
+- **subcategoria**: formato "Categoría > Subcategoría"
+- **cuenta**: cuenta utilizada
+- **cuenta_destino**: (solo transferencias)
+- **fecha**: formato dd/MM/yyyy
+- **cuotas**: número de cuotas (opcional: solo si se menciona)
+
+### REGLAS DE FECHA:
+- Si no se menciona fecha, poner la fecha actual: ${currentDateString}.
+- Si menciona "ayer" → calcular fecha anterior
+- Si menciona "el lunes", "hace 3 días", etc. → calcular fecha específica
+
+### REGLAS DE CUOTAS:
+- Si menciona cuotas → poner un valor del 1 al 60
+- Si no se mencionan cuotas → no incluir el campo "cuotas"
 
 ### CUENTAS DISPONIBLES:
 ${accounts.join(', ')}
-- Default: "No definido"
+- Si no especifica cuenta → usar "No definido"
 
 ### CATEGORÍAS DE GASTOS:
 ${Object.entries(expense_categories).map(([cat, subcats]) => 
@@ -174,13 +168,6 @@ ${Object.entries(income_categories).map(([cat, subcats]) =>
 ### FORMATO DE SUBCATEGORÍA:
 - La subcategoría debe devolverse en formato "Categoría > Subcategoría"
 - Ejemplo: Si eliges "Nafta" de la categoría "Auto", devuelve "Auto > Nafta"
-
-### PROCESO:
-1. Transcribe el audio completo
-2. Identifica el tipo de registro financiero
-3. Extrae todos los campos relevantes
-4. Valida que la subcategoría exista en las listas
-5. Si menciona cuotas extraer número de cuotas
 
 ### RESPUESTA:
 Devuelve ÚNICAMENTE un JSON válido con los campos extraídos.`;

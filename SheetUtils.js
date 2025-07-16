@@ -12,24 +12,24 @@ function logToExpenseSheet(data, timestamp) {
 
     // Usar la fecha proporcionada por el usuario si está disponible, de lo contrario usar timestamp
     let baseDate;
-    if (data.date) {
+    if (data.fecha) {
       // Convertir fecha dd/MM/yyyy a objeto Date
-      const [day, month, year] = data.date.split('/').map(Number);
+      const [day, month, year] = data.fecha.split('/').map(Number);
       baseDate = new Date(year, month - 1, day);
     } else {
       baseDate = new Date(timestamp * 1000);
     }
 
     // Determinar el tipo de registro en la columna I
-    const recordType = data.type === 'gasto' ? 'Gastos' : 
-                      data.type === 'ingreso' ? 'Ingresos' : 
+    const recordType = data.tipo === 'gasto' ? 'Gastos' : 
+                      data.tipo === 'ingreso' ? 'Ingresos' : 
                       'Transferencias';
 
     // Manejar según el tipo de registro
-    if (data.type === 'transferencia') {
+    if (data.tipo === 'transferencia') {
       // Transferencia: crear dos registros
       createTransferRecords(sheet, data, baseDate, recordType);
-    } else if (data.type === 'gasto' && data.installments && data.installments > 1) {
+    } else if (data.tipo === 'gasto' && data.cuotas && data.cuotas > 1) {
       // Gasto con cuotas: crear un registro por cuota
       createInstallmentRecords(sheet, data, baseDate, recordType);
     } else {
@@ -56,13 +56,13 @@ function logToExpenseSheet(data, timestamp) {
  */
 function createTransferRecords(sheet, data, baseDate, recordType) {
   const formattedDate = Utilities.formatDate(baseDate, Session.getScriptTimeZone(), "dd/MM/yyyy");
-  const amount = Math.abs(data.amount);
+  const amount = Math.abs(data.monto);
   
   // Registro negativo para cuenta origen
   const lastRow1 = sheet.getLastRow() + 1;
   sheet.getRange(lastRow1, 1, 1, 10).setValues([
-    [formattedDate, -amount, data.account, "", "", 
-     `Transferencia a ${data.second_account}`, "", -amount, recordType, "ARS"]
+    [formattedDate, -amount, data.cuenta, "", "", 
+     `Transferencia a ${data.cuenta_destino}`, "", -amount, recordType, "ARS"]
   ]);
   
   // Agregar fórmulas en las columnas K y L
@@ -72,8 +72,8 @@ function createTransferRecords(sheet, data, baseDate, recordType) {
   // Registro positivo para cuenta destino
   const lastRow2 = sheet.getLastRow() + 1;
   sheet.getRange(lastRow2, 1, 1, 10).setValues([
-    [formattedDate, amount, data.second_account, "", "", 
-     `Transferencia de ${data.account}`, "", amount, recordType, "ARS"]
+    [formattedDate, amount, data.cuenta_destino, "", "", 
+     `Transferencia de ${data.cuenta}`, "", amount, recordType, "ARS"]
   ]);
   
   // Agregar fórmulas en las columnas K y L
@@ -89,8 +89,8 @@ function createTransferRecords(sheet, data, baseDate, recordType) {
  * @param {string} recordType - Tipo de registro
  */
 function createInstallmentRecords(sheet, data, baseDate, recordType) {
-  const totalAmount = Math.abs(data.amount);
-  const installments = parseInt(data.installments);
+  const totalAmount = Math.abs(data.monto);
+  const installments = parseInt(data.cuotas);
   const monthlyAmount = totalAmount / installments;
   
   // Crear un registro por cada cuota
@@ -100,11 +100,11 @@ function createInstallmentRecords(sheet, data, baseDate, recordType) {
     const formattedDate = Utilities.formatDate(installmentDate, Session.getScriptTimeZone(), "dd/MM/yyyy");
     
     // Descripción con información de cuota
-    const description = `${data.description} (Cuota ${i + 1}/${installments})`;
-    
+    const description = `${data.descripcion} (Cuota ${i + 1}/${installments})`;
+
     const lastRow = sheet.getLastRow() + 1;
     sheet.getRange(lastRow, 1, 1, 10).setValues([
-      [formattedDate, -monthlyAmount, data.account, data.category, data.subcategory, 
+      [formattedDate, -monthlyAmount, data.cuenta, data.categoria, data.subcategoria,
        description, "", -monthlyAmount, recordType, "ARS"]
     ]);
     
@@ -125,16 +125,16 @@ function createSimpleRecord(sheet, data, baseDate, recordType) {
   const formattedDate = Utilities.formatDate(baseDate, Session.getScriptTimeZone(), "dd/MM/yyyy");
   
   // Determinar el signo del monto según el tipo
-  let amount = Math.abs(data.amount);
-  if (data.type === 'gasto') {
+  let amount = Math.abs(data.monto);
+  if (data.tipo === 'gasto') {
     amount = -amount; // Gastos son negativos
   }
   // Los ingresos quedan positivos
   
   const lastRow = sheet.getLastRow() + 1;
   sheet.getRange(lastRow, 1, 1, 10).setValues([
-    [formattedDate, amount, data.account, data.category, data.subcategory, 
-     data.description, "", amount, recordType, "ARS"]
+    [formattedDate, amount, data.cuenta, data.categoria, data.subcategoria, 
+     data.descripcion, "", amount, recordType, "ARS"]
   ]);
   
   // Agregar fórmulas en las columnas K y L

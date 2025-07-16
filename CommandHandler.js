@@ -13,15 +13,11 @@ function handleCommands(message, chatId) {
   const command = parts[0].toLowerCase();
   
   switch (command) {
-    case '/reload':
-      reloadConfig(chatId);
-      return true;
-    
-    case '/listacategorias':
+    case '/categorias':
       listCategories(chatId);
       return true;
     
-    case '/listasubcategorias':
+    case '/subcategorias':
       const categoryParam = parts.slice(1).join(' ');
       if (categoryParam.trim() === '') {
         // Mostrar la lista de categorías disponibles como comandos clickeables
@@ -49,7 +45,7 @@ function handleCommands(message, chatId) {
       }
       return true;
 
-    case '/listacuentas':
+    case '/cuentas':
       listAccounts(chatId);
       return true;
       
@@ -59,31 +55,6 @@ function handleCommands(message, chatId) {
       
     default:
       return false;
-  }
-}
-
-/**
- * Recarga la configuración
- */
-function reloadConfig(chatId) {
-  try {
-    const configData = CONFIG.loadConfigData();
-    
-    // Limpiar las variables globales
-    Object.keys(categories).forEach(key => delete categories[key]);
-    accounts.length = 0;
-    
-    // Agregar nuevos elementos
-    Object.keys(configData.categories).forEach(category => {
-      categories[category] = [...configData.categories[category]];
-    });
-    
-    configData.accounts.forEach(a => accounts.push(a));
-    
-    sendTelegramMessage(chatId, "✅ Configuración recargada exitosamente");
-  } catch (error) {
-    sendTelegramMessage(chatId, "❌ Error al recargar: " + error.message);
-    logError('reloadConfig', error);
   }
 }
 
@@ -161,10 +132,9 @@ function listAccounts(chatId) {
 function sendHelpMessage(chatId) {
   const message = `🤖 Comandos disponibles:
 
-/reload - Recargar configuración
-/listacategorias - Ver categorías disponibles
-/listasubcategorias [categoría] - Ver subcategorías de una categoría
-/listacuentas - Ver cuentas disponibles
+/categorias - Ver categorías disponibles
+/subcategorias [categoría] - Ver subcategorías de una categoría
+/cuentas - Ver cuentas disponibles
 /ayuda - Ver esta ayuda`;
 
   sendTelegramMessage(chatId, message);

@@ -67,20 +67,23 @@ function doPost(e) {
     }
     
     // Verificar que structuredData existe antes de validar
-    if (structuredData && validateData(structuredData)) {
-      // Log para pruebas
-      Logger.log("Generated data:" + JSON.stringify(structuredData));
+    if (structuredData) {
+      const validation = validateData(structuredData);
+      if (validation.valid) {
+        // Log para pruebas
+        Logger.log("Generated data:" + JSON.stringify(structuredData));
 
-      // Obtener los datos normalizados de la validación
-      const normalizedData = normalizeGeminiResponse(structuredData);
-      
-      // Editar descripción para que siempre comience con mayúscula
-      if (normalizedData && normalizedData.description) {
-        normalizedData.description = normalizedData.description.charAt(0).toUpperCase() + normalizedData.description.slice(1);
+        // Editar descripción para que siempre comience con mayúscula
+        if (structuredData && structuredData.descripcion) {
+          structuredData.descripcion = structuredData.descripcion.charAt(0).toUpperCase() + structuredData.descripcion.slice(1);
+        }
+
+        // En lugar de guardar directamente, enviar mensaje de confirmación
+        sendConfirmationMessage(chatId, structuredData, message.date);
+      } else {
+        // Informar del error al usuario con detalle
+        sendTelegramMessage(chatId, validation.error || "❌ No pude procesar correctamente tu registro. Por favor intenta de nuevo con información más clara.");
       }
-      
-      // En lugar de guardar directamente, enviar mensaje de confirmación
-      sendConfirmationMessage(chatId, normalizedData, message.date);
     } else {
       // Informar del error al usuario
       sendTelegramMessage(chatId, "❌ No pude procesar correctamente tu registro. Por favor intenta de nuevo con información más clara.");
@@ -119,8 +122,8 @@ function formatCurrency(amount) {
  * @return {string} Fecha formateada en dd/MM/yyyy
  */
 function getFormattedDate(data, timestamp) {
-  if (data.date) {
-    return data.date;
+  if ('fecha' in data && data.fecha) {
+    return data.fecha;
   } else {
     const date = new Date(timestamp * 1000);
     return Utilities.formatDate(date, Session.getScriptTimeZone(), "dd/MM/yyyy");
@@ -137,30 +140,30 @@ function getFormattedDate(data, timestamp) {
 function formatExpenseForDisplay(data, dateStr, prefix = null) {
   // Determinar el prefijo según el tipo si no se proporciona
   if (!prefix) {
-    const typeEmoji = data.type === 'gasto' ? '💸' : 
-                     data.type === 'ingreso' ? '💰' : '🔄';
-    const typeText = data.type === 'gasto' ? 'Gasto registrado' : 
-                    data.type === 'ingreso' ? 'Ingreso registrado' : 'Transferencia registrada';
+    const typeEmoji = data.tipo === 'gasto' ? '💸' : 
+                     data.tipo === 'ingreso' ? '💰' : '🔄';
+    const typeText = data.tipo === 'gasto' ? 'Gasto registrado' : 
+                    data.tipo === 'ingreso' ? 'Ingreso registrado' : 'Transferencia registrada';
     prefix = `✅ <b>${typeText}</b> ${typeEmoji}`;
   }
-  
-  let message = `${prefix}\n🗓️ ${dateStr}\n💰 ${formatCurrency(data.amount)}`;
-  
+
+  let message = `${prefix}\n🗓️ ${dateStr}\n💰 ${formatCurrency(data.monto)}`;
+
   // Agregar información específica según el tipo
-  if (data.type === 'transferencia') {
-    message += `\n📤 Origen: ${data.account}`;
-    message += `\n📥 Destino: ${data.second_account}`;
+  if (data.tipo === 'transferencia') {
+    message += `\n📤 Origen: ${data.cuenta}`;
+    message += `\n📥 Destino: ${data.cuenta_destino}`;
   } else {
     // Para gastos e ingresos, mostrar la cuenta
-    message += `\n💳 ${data.account}`;
+    message += `\n💳 ${data.cuenta}`;
     
     // Agregar información de cuotas si existe (solo para gastos)
-    if (data.type === 'gasto' && data.installments && data.installments > 1) {
-      const monthlyAmount = parseFloat(data.amount) / parseInt(data.installments);
-      message += `\n🔢 ${data.installments} cuotas de ${formatCurrency(monthlyAmount)}`;
+    if (data.tipo === 'gasto' && data.cuotas && data.cuotas > 1) {
+      const monthlyAmount = parseFloat(data.monto) / parseInt(data.cuotas);
+      message += `\n🔢 ${data.cuotas} cuotas de ${formatCurrency(monthlyAmount)}`;
     }
-    
-    message += `\n📝 ${data.description}\n🏷️ ${data.subcategory}`;
+
+    message += `\n📝 ${data.descripcion}\n🏷️ ${data.subcategoria}`;
   }
   
   return message;
@@ -275,8 +278,8 @@ function sendConfirmationMessage(chatId, data, timestamp) {
   const displayDate = getFormattedDate(data, timestamp);
   
   // Crear mensaje con prefijo de confirmación
-  const typeText = data.type === 'gasto' ? 'gasto' : 
-                  data.type === 'ingreso' ? 'ingreso' : 'transferencia';
+  const typeText = data.tipo === 'gasto' ? 'gasto' : 
+                  data.tipo === 'ingreso' ? 'ingreso' : 'transferencia';
   const confirmPrefix = `⚠️ <b>Confirmar ${typeText}:</b>`;
   
   // Crear mensaje
@@ -318,8 +321,8 @@ function startEditFlow(chatId, messageId, savedData, expenseId) {
   const displayDate = getFormattedDate(savedData.data, savedData.timestamp);
   
   // Crear prefijo de edición
-  const typeText = savedData.data.type === 'gasto' ? 'gasto' : 
-                  savedData.data.type === 'ingreso' ? 'ingreso' : 'transferencia';
+  const typeText = savedData.data.tipo === 'gasto' ? 'gasto' : 
+                  savedData.data.tipo === 'ingreso' ? 'ingreso' : 'transferencia';
   const editPrefix = `✏️ <b>Editando ${typeText}:</b>`;
   
   // Actualizar el mensaje original para indicar que está en modo edición
@@ -327,7 +330,7 @@ function startEditFlow(chatId, messageId, savedData, expenseId) {
     chatId,
     messageId,
     formatExpenseForDisplay(savedData.data, displayDate, editPrefix) + 
-    "\n\n<i>Por favor, envía un mensaje indicando qué quieres modificar.</i>"
+    "\n\n<i>Por favor, enviá un mensaje indicando qué querés modificar.</i>"
   );
   
   // Guardar información de que estamos en modo edición para este chat
@@ -365,33 +368,28 @@ function processEditMessage(message, chatId) {
     if (message.text) {
       // Definir un prompt específico para edición
       const editPrompt = `
-### CONTEXTO DE EDICIÓN:
-Hoy es ${currentDateString}. Tienes que actualizar un registro financiero existente según las instrucciones del usuario.
+### TAREA:
+Tienes que actualizar un registro financiero existente. Identifica qué campos quiere modificar el usuario y actualiza ÚNICAMENTE los campos mencionados.
 
 ### DATOS ACTUALES DEL REGISTRO:
-- **Tipo**: ${originalData.data.type || 'gasto'}
-- **Monto**: ${originalData.data.amount}
-- **Descripción**: ${originalData.data.description}
-- **Categoría**: ${originalData.data.category}
-- **Subcategoría**: ${originalData.data.subcategory}
-- **Cuenta**: ${originalData.data.account}
-- **Fecha**: ${originalData.data.date || 'No especificada'}
-- **Cuotas**: ${originalData.data.installments || 'No especificado'}
+- **tipo**: ${originalData.data.tipo}
+- **monto**: ${originalData.data.monto}
+- **descripcion**: ${originalData.data.descripcion}
+- **categoria**: ${originalData.data.categoria}
+- **subcategoria**: ${originalData.data.subcategoria}
+- **cuenta**: ${originalData.data.cuenta}
+- **cuenta_destino**: ${originalData.data.cuenta_destino || 'No especificada'}
+- **fecha**: ${originalData.data.fecha}
+- **cuotas**: ${originalData.data.cuotas || 'No especificado'}
 
-### INSTRUCCIÓN DEL USUARIO:
-"${message.text}"
+### REGLAS DE FECHA:
+- Hoy es ${currentDateString}.
+- Si menciona "ayer" → calcular fecha anterior
+- Si menciona "el lunes", "hace 3 días", etc. → calcular fecha específica
 
-### TAREA:
-Actualiza ÚNICAMENTE los campos que el usuario solicita modificar. Mantén los demás campos sin cambios.
-
-### REGLAS DE ACTUALIZACIÓN:
-1. **Monto**: Si menciona un nuevo monto, actualízalo (solo números positivos)
-2. **Descripción**: Si menciona nueva descripción, actualízala
-3. **Categoría/Subcategoría**: Si menciona nueva categoría, debe existir en las listas
-4. **Cuenta**: Si menciona nueva cuenta, debe existir en la lista
-5. **Fecha**: Si menciona nueva fecha, convertirla a formato dd/MM/yyyy
-6. **Cuotas**: Si menciona número de cuotas, actualízalo (solo para gastos)
-7. **Campos no mencionados**: MANTENER valores originales
+### REGLAS DE CUOTAS:
+- Si menciona cuotas → actualizar el campo "cuotas"
+- Si no había cuotas especificadas y no se mencionan nuevas → no incluir el campo "cuotas"
 
 ### CUENTAS DISPONIBLES:
 ${accounts.join(', ')}
@@ -410,12 +408,8 @@ ${Object.entries(income_categories).map(([cat, subcats]) =>
 - La subcategoría debe devolverse en formato "Categoría > Subcategoría"
 - Ejemplo: Si eliges "Nafta" de la categoría "Auto", devuelve "Auto > Nafta"
 
-### VALIDACIONES:
-- Subcategoría debe estar en formato "Categoría > Subcategoría"
-- Cuenta debe existir en la lista proporcionada
-- Monto debe ser número positivo
-- Fecha debe estar en formato dd/MM/yyyy
-- Cuotas debe ser número entero positivo (solo para gastos)
+### INSTRUCCIÓN DEL USUARIO:
+"${message.text}"
 
 ### RESPUESTA REQUERIDA:
 Devuelve ÚNICAMENTE un JSON con TODOS los campos (modificados y sin modificar)`;
@@ -427,28 +421,28 @@ Devuelve ÚNICAMENTE un JSON con TODOS los campos (modificados y sin modificar)`
       
       // Definir un prompt específico para edición con audio
       const editPrompt = `
-### TAREA DE EDICIÓN POR AUDIO:
-1. Transcribe el audio con máxima precisión
-2. Actualiza el registro financiero según las instrucciones del usuario
-
-### CONTEXTO:
-Hoy es ${currentDateString}. Tienes que actualizar un registro financiero existente.
+### TAREA:
+Tienes que actualizar un registro financiero existente. Identifica qué campos quiere modificar el usuario y actualiza ÚNICAMENTE los campos mencionados.
 
 ### DATOS ACTUALES DEL REGISTRO:
-- **Tipo**: ${originalData.data.type || 'gasto'}
-- **Monto**: ${originalData.data.amount}
-- **Descripción**: ${originalData.data.description}
-- **Categoría**: ${originalData.data.category}
-- **Subcategoría**: ${originalData.data.subcategory}
-- **Cuenta**: ${originalData.data.account}
-- **Fecha**: ${originalData.data.date || 'No especificada'}
-- **Cuotas**: ${originalData.data.installments || 'No especificado'}
+- **tipo**: ${originalData.data.tipo}
+- **monto**: ${originalData.data.monto}
+- **descripcion**: ${originalData.data.descripcion}
+- **categoria**: ${originalData.data.categoria}
+- **subcategoria**: ${originalData.data.subcategoria}
+- **cuenta**: ${originalData.data.cuenta}
+- **cuenta_destino**: ${originalData.data.cuenta_destino || 'No especificada'}
+- **fecha**: ${originalData.data.fecha}
+- **cuotas**: ${originalData.data.cuotas || 'No especificado'}
 
-### INSTRUCCIONES:
-1. Transcribe completamente el mensaje de voz
-2. Identifica qué campos quiere modificar el usuario
-3. Actualiza ÚNICAMENTE los campos mencionados
-4. Mantén los demás campos sin cambios
+### REGLAS DE FECHA:
+- Hoy es ${currentDateString}.
+- Si menciona "ayer" → calcular fecha anterior
+- Si menciona "el lunes", "hace 3 días", etc. → calcular fecha específica
+
+### REGLAS DE CUOTAS:
+- Si menciona cuotas → actualizar el campo "cuotas"
+- Si no había cuotas especificadas y no se mencionan nuevas → no incluir el campo "cuotas"
 
 ### CUENTAS DISPONIBLES:
 ${accounts.join(', ')}
@@ -467,41 +461,30 @@ ${Object.entries(income_categories).map(([cat, subcats]) =>
 - La subcategoría debe devolverse en formato "Categoría > Subcategoría"
 - Ejemplo: Si eliges "Nafta" de la categoría "Auto", devuelve "Auto > Nafta"
 
-### VALIDACIONES:
-- Subcategoría debe estar en formato "Categoría > Subcategoría"
-- Cuenta debe existir en la lista proporcionada
-- Monto debe ser número positivo
-- Si menciona fecha, convertirla a formato dd/MM/yyyy
-- Cuotas debe ser número entero positivo (solo para gastos)
-
-### PROCESO:
-1. Transcribe el audio completo
-2. Identifica los campos a modificar
-3. Actualiza solo los campos mencionados
-4. Mantén los demás valores originales
-
 ### RESPUESTA REQUERIDA:
 Devuelve ÚNICAMENTE un JSON con TODOS los campos (modificados y sin modificar)`;
       
       updatedData = processAudioWithGemini(audioBlob, message.voice.mime_type, editPrompt);
     }
     
-    if (updatedData && validateData(updatedData)) {
-      // Obtener los datos normalizados
-      const normalizedUpdatedData = normalizeGeminiResponse(updatedData);
-      
-      // Guardar los datos actualizados
-      const cacheKey = `expense_${editMode.expenseId}`;
-      originalData.data = normalizedUpdatedData; // Actualizar los datos
-      cache.put(cacheKey, JSON.stringify(originalData), 21600); // 6 horas
-      
-      // Eliminar el estado de edición
-      cache.remove(`edit_mode_${chatId}`);
-      
-      // Enviar mensaje de confirmación con datos actualizados
-      sendConfirmationMessage(chatId, normalizedUpdatedData, originalData.timestamp);
-      
-      return true;
+    if (updatedData) {
+      const validation = validateData(updatedData);
+      if (validation.valid) {
+        // Guardar los datos actualizados
+        const cacheKey = `expense_${editMode.expenseId}`;
+        cache.put(cacheKey, JSON.stringify(updatedData), 21600); // 6 horas
+
+        // Eliminar el estado de edición
+        cache.remove(`edit_mode_${chatId}`);
+
+        // Enviar mensaje de confirmación con datos actualizados
+        sendConfirmationMessage(chatId, updatedData, updatedData.timestamp);
+
+        return true;
+      } else {
+        sendTelegramMessage(chatId, validation.error || "❌ No pude procesar correctamente tu edición. Por favor intenta nuevamente con información más clara.");
+        return true;
+      }
     } else {
       sendTelegramMessage(chatId, "❌ No pude procesar correctamente tu edición. Por favor intenta nuevamente con información más clara.");
       return true;
