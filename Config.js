@@ -8,7 +8,7 @@ const CONFIG = {
   APP_URL: PropertiesService.getScriptProperties().getProperty('APP_URL'),
   ERROR_SHEET_NAME: 'Bot Errors',
   EXPENSES_SHEET_NAME: 'Registros',
-  CONFIG_SHEET_NAME: 'Categorías y subcategorías',
+  CONFIG_SHEET_NAME: 'Config Bot',
 
   // Función para cargar categorías y cuentas dinámicamente
   loadConfigData: function() {

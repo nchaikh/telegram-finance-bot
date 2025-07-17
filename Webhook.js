@@ -37,7 +37,7 @@ function doPost(e) {
     
     // Restrict to your chat ID
     if (chatId != CONFIG.MY_CHAT_ID) {
-      sendTelegramMessage(chatId, "Chat ID Inválido: " + chatId);
+      // sendTelegramMessage(chatId, "Chat ID Inválido: " + chatId); Lo dejo comentado para no gastarme en enviar mensajes
       return;
     }
 
