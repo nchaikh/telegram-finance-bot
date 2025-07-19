@@ -30,8 +30,9 @@ This repository contains the code for a Telegram bot that helps manage your pers
 
 1. Go to [Google Apps Script](https://script.google.com/).
 2. Create a new project.
-3. Copy the code from this repository and paste it into the Apps Script editor.
-4. Alternatively, if you have `clasp` installed, you can clone this repository and use `clasp push` to upload it.
+3. Go to `Project Settings` and turn on the option to show the manifest file `appsscript.json` in the editor.
+4. Copy the code from this repository and paste it into the Apps Script editor.
+5. Alternatively, if you have `clasp` installed, you can clone this repository and use `clasp push` to upload it.
 
 ### 3. Configure the Bot
 
