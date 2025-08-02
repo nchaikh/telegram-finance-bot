@@ -65,20 +65,12 @@ function createTransferRecords(sheet, data, baseDate, recordType) {
      `Transferencia a ${data.cuenta_destino}`, "", -amount, recordType, "ARS"]
   ]);
   
-  // Agregar fórmulas en las columnas K y L
-  sheet.getRange(lastRow1, 11).setFormulaR1C1("=AND(RC1 >= 'Estadísticas'!R1C2; RC1 <= 'Estadísticas'!R2C2)");
-  sheet.getRange(lastRow1, 12).setFormulaR1C1('=TEXT(RC1; "YYYY-MM")');
-  
   // Registro positivo para cuenta destino
   const lastRow2 = sheet.getLastRow() + 1;
   sheet.getRange(lastRow2, 1, 1, 10).setValues([
     [formattedDate, amount, data.cuenta_destino, "", "", 
      `Transferencia de ${data.cuenta}`, "", amount, recordType, "ARS"]
   ]);
-  
-  // Agregar fórmulas en las columnas K y L
-  sheet.getRange(lastRow2, 11).setFormulaR1C1("=AND(RC1 >= 'Estadísticas'!R1C2; RC1 <= 'Estadísticas'!R2C2)");
-  sheet.getRange(lastRow2, 12).setFormulaR1C1('=TEXT(RC1; "YYYY-MM")');
 }
 
 /**
@@ -107,10 +99,6 @@ function createInstallmentRecords(sheet, data, baseDate, recordType) {
       [formattedDate, -monthlyAmount, data.cuenta, data.categoria, data.subcategoria,
        description, "", -monthlyAmount, recordType, "ARS"]
     ]);
-    
-    // Agregar fórmulas en las columnas K y L
-    sheet.getRange(lastRow, 11).setFormulaR1C1("=AND(RC1 >= 'Estadísticas'!R1C2; RC1 <= 'Estadísticas'!R2C2)");
-    sheet.getRange(lastRow, 12).setFormulaR1C1('=TEXT(RC1; "YYYY-MM")');
   }
 }
 
@@ -136,10 +124,6 @@ function createSimpleRecord(sheet, data, baseDate, recordType) {
     [formattedDate, amount, data.cuenta, data.categoria, data.subcategoria, 
      data.descripcion, "", amount, recordType, "ARS"]
   ]);
-  
-  // Agregar fórmulas en las columnas K y L
-  sheet.getRange(lastRow, 11).setFormulaR1C1("=AND(RC1 >= 'Estadísticas'!R1C2; RC1 <= 'Estadísticas'!R2C2)");
-  sheet.getRange(lastRow, 12).setFormulaR1C1('=TEXT(RC1; "YYYY-MM")');
 }
 
 /**
