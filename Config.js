@@ -19,6 +19,7 @@ const CONFIG = {
 
     const data = sheet.getDataRange().getValues();
     const accounts = [];
+    const accounts_associations = {};
     const expense_categories = {};
     const income_categories = {};
 
@@ -27,6 +28,8 @@ const CONFIG = {
       const type = data[i][0]; // Columna A: Tipo
       const category = data[i][1]; // Columna B: Categorías
       const subcategory = data[i][2]; // Columna C: Subcategorías
+      const account = data[i][3]; // Columna D: Cuentas
+      const accountAssociated = data[i][4]; // Columna E: Cuenta Asociada
 
       // Si la categoría existe, añadir la subcategoría a la lista de subcategorías
       if (category && subcategory && type === "Gastos") {
@@ -42,10 +45,14 @@ const CONFIG = {
         income_categories[category].push(subcategory);  // Agregamos la subcategoría a la lista correspondiente
       }
 
-
-      if (data[i][3]) accounts.push(data[i][3]);   // Columna D: Cuentas
+      if (account) {
+        accounts.push(account);   // Columna D: Cuentas
+        if (accountAssociated) {
+          accounts_associations[account] = accountAssociated; // Asociación cuenta -> cuenta padre
+        }
+      }
     }
-    return { income_categories, expense_categories, accounts };
+    return { income_categories, expense_categories, accounts, accounts_associations };
   }
 };
 
@@ -54,3 +61,4 @@ const configData = CONFIG.loadConfigData();
 const income_categories = configData.income_categories;
 const expense_categories = configData.expense_categories;
 const accounts = configData.accounts;
+const accounts_associations = configData.accounts_associations;

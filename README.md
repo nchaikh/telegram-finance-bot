@@ -57,10 +57,13 @@ This repository contains the code for a Telegram bot that helps manage your pers
    - Column B: Categorías (Categories)
    - Column C: Subcategorías (Subcategories) with the following format: "Category > Subcategory"
    - Column D: Cuentas (Accounts)
+   - Column E: Cuenta Asociada (Associated Account) - Optional, for linking cards to bank accounts (e.g., link "Visa Crédito" to "Banco ABC")
 
    Add your desired categories for both expenses and income. The "Tipo" column should contain:
    - "Gastos" for expense categories
    - "Ingresos" for income categories
+
+   For accounts, you can add bank accounts, cash, and cards. If a card is associated to a bank account (e.g., debit card), put the bank account name in Column E. This way, expenses on that card will be recorded on the associated bank account.
 
 4. The "Registros" sheet will store all financial records with the following structure:
    - Date

@@ -67,6 +67,21 @@ function handleCommands(message, chatId) {
     case '/ayuda':
       sendHelpMessage(chatId);
       return true;
+    case '/saldos': {
+      const balances = calculateBalances();
+      let msg = '<b>💰 Saldos por cuenta:</b>\n\n';
+      for (const account in balances) {
+        const balance = balances[account];
+        const formattedBalance = formatCurrency(Math.abs(balance));
+        const sign = balance >= 0 ? '+' : '-';
+        msg += `• <b>${account}:</b> ${sign}${formattedBalance}\n`;
+      }
+      if (Object.keys(balances).length === 0) {
+        msg += 'No hay registros aún.';
+      }
+      sendTelegramMessage(chatId, msg, { parse_mode: 'HTML' });
+      return true;
+    }
     default:
       return false;
   }
@@ -137,6 +152,7 @@ function sendHelpMessage(chatId) {
 /categorias_ingresos - Ver categorías de ingresos
 /subcategorias [categoría] - Ver subcategorías de una categoría
 /cuentas - Ver cuentas disponibles
+/saldos - Ver saldos actuales por cuenta
 /ayuda - Ver esta ayuda`;
 
   sendTelegramMessage(chatId, message);

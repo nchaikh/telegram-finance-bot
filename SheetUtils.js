@@ -20,6 +20,11 @@ function logToExpenseSheet(data, timestamp) {
       baseDate = new Date(timestamp * 1000);
     }
 
+    // Si es gasto o ingreso y la cuenta tiene asociación, usar la cuenta asociada
+    if (data.tipo !== 'transferencia' && accounts_associations[data.cuenta]) {
+      data.cuenta = accounts_associations[data.cuenta];
+    }
+
     // Determinar el tipo de registro en la columna I
     const recordType = data.tipo === 'gasto' ? 'Gastos' : 
                       data.tipo === 'ingreso' ? 'Ingresos' : 
@@ -156,5 +161,39 @@ function logError(functionName, error, additionalInfo = {}) {
     // Si falla el registro en la hoja, intentar con Logger
     Logger.log(`ERROR en ${functionName}: ${error.message || String(error)}`);
     Logger.log(`Error al registrar el error: ${e.message || String(e)}`);
+  }
+}
+
+/**
+ * Calcula los saldos actuales por cuenta leyendo la hoja de registros
+ * @return {Object} Objeto con saldos por cuenta {cuenta: saldo}
+ */
+function calculateBalances() {
+  try {
+    const sheet = SpreadsheetApp.openById(CONFIG.SHEET_ID).getSheetByName(CONFIG.EXPENSES_SHEET_NAME);
+    if (!sheet) {
+      throw new Error(`Hoja "${CONFIG.EXPENSES_SHEET_NAME}" no encontrada`);
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const balances = {};
+
+    // Empezar desde fila 1 (ignorar encabezado en fila 0)
+    for (let i = 1; i < data.length; i++) {
+      const account = data[i][2]; // Columna C: Cuenta
+      const amount = parseFloat(data[i][1]); // Columna B: Monto
+
+      if (account && !isNaN(amount)) {
+        if (!balances[account]) {
+          balances[account] = 0;
+        }
+        balances[account] += amount;
+      }
+    }
+
+    return balances;
+  } catch (error) {
+    logError('calculateBalances', error);
+    throw error;
   }
 }
