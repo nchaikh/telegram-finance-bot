@@ -53,7 +53,7 @@ This repository contains the code for a Telegram bot that helps manage your pers
    - `Bot Errors`: For logging errors
 
 3. Configure the "Config Bot" sheet with these columns:
-   - Column A: Tipo (Type) - e.g., "Gastos" (Expenses), "Ingresos" (Income)
+   - Column A: Tipo (Type) - e.g., "Gastos" (Expenses), "Ingresos" (Income), "Inversiones" (Investments)
    - Column B: Categorías (Categories)
    - Column C: Subcategorías (Subcategories) with the following format: "Category > Subcategory"
    - Column D: Cuentas (Accounts)
@@ -62,18 +62,22 @@ This repository contains the code for a Telegram bot that helps manage your pers
    Add your desired categories for both expenses and income. The "Tipo" column should contain:
    - "Gastos" for expense categories
    - "Ingresos" for income categories
+   - "Inversiones" for investment categories (e.g., "Acciones", "Bonos")
 
    For accounts, you can add bank accounts, cash, and cards. If a card is associated to a bank account (e.g., debit card), put the bank account name in Column E. This way, expenses on that card will be recorded on the associated bank account.
 
 4. The "Registros" sheet will store all financial records with the following structure:
    - Date
-   - Amount (negative for expenses, positive for income and transfers)
+   - Amount (negative for expenses/investments, positive for income and transfers)
    - Account (source account)
    - Category
    - Subcategory
    - Description
-   - Type (gasto/ingreso/transferencia)
+   - Type (gasto/ingreso/transferencia/inversión)
    - Additional data fields and formulas for reporting
+   - Asset (for investments)
+   - Quantity (for investments)
+   - Unit Price (for investments)
 
 ### 5. Deploy the Script
 
@@ -107,6 +111,7 @@ Open Telegram and start a chat with your bot. The bot is restricted to your chat
   - Expenses: "50 euros for dinner at a restaurant in cash", "Paid 1000 pesos for rent in 12 installments with Visa credit card"
   - Income: "Received 5000 salary from work in bank account", "Got 50 from freelance project in cash"
   - Transfers: "Transferred 2000 from savings to checking account"
+  - Investments: "Bought 10 shares of AAPL at $150 each in Broker account", "Invested 1000 in bonds at $1000 total in Investment account"
 
 - **Interactive Confirmations**:
   After processing your message, the bot will show a confirmation with three options:

@@ -22,6 +22,7 @@ const CONFIG = {
     const accounts_associations = {};
     const expense_categories = {};
     const income_categories = {};
+    const investment_categories = {};
 
     // Leer columnas (ignorar la primera fila que es el encabezado)
     for (let i = 1; i < data.length; i++) {
@@ -44,6 +45,12 @@ const CONFIG = {
         }
         income_categories[category].push(subcategory);  // Agregamos la subcategoría a la lista correspondiente
       }
+      if (type === "Inversiones" && category && subcategory) {
+        if (!investment_categories[category]) {
+          investment_categories[category] = [];  // Inicializamos el array si la categoría no existe
+        }
+        investment_categories[category].push(subcategory);  // Agregamos la subcategoría a la lista correspondiente
+      }
 
       if (account) {
         accounts.push(account);   // Columna D: Cuentas
@@ -52,7 +59,7 @@ const CONFIG = {
         }
       }
     }
-    return { income_categories, expense_categories, accounts, accounts_associations };
+    return { income_categories, expense_categories, investment_categories, accounts, accounts_associations };
   }
 };
 
@@ -60,5 +67,6 @@ const CONFIG = {
 const configData = CONFIG.loadConfigData();
 const income_categories = configData.income_categories;
 const expense_categories = configData.expense_categories;
+const investment_categories = configData.investment_categories;
 const accounts = configData.accounts;
 const accounts_associations = configData.accounts_associations;

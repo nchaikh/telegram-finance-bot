@@ -5,7 +5,10 @@
  */
 function validateData(data) {
   // Verificar campos requeridos básicos
-  const requiredFields = ['tipo', 'monto', 'descripcion', 'categoria', 'subcategoria', 'cuenta'];
+  let requiredFields = ['tipo', 'monto', 'descripcion', 'categoria', 'subcategoria', 'cuenta'];
+  if (data.tipo === 'inversión') {
+    requiredFields = requiredFields.concat(['activo', 'cantidad', 'precio_unitario']);
+  }
   const missingFields = requiredFields.filter(field => !(field in data));
 
   if (missingFields.length > 0) {
@@ -14,16 +17,16 @@ function validateData(data) {
   }
 
   // Cargar categorías y cuentas dinámicamente
-  const { expense_categories, income_categories, accounts } = CONFIG.loadConfigData();
+  const { expense_categories, income_categories, investment_categories, accounts } = CONFIG.loadConfigData();
 
   // Validar tipo de registro
-  const validTypes = ['gasto', 'ingreso', 'transferencia'];
+  const validTypes = ['gasto', 'ingreso', 'transferencia', 'inversión'];
   if (!validTypes.includes(data.tipo)) {
     logError('validateData', new Error('Tipo de registro inválido'), {
       type: data.tipo,
       validTypes: validTypes
     });
-    return { valid: false, error: '❌ Tipo de registro inválido. Debe ser gasto, ingreso o transferencia.' };
+    return { valid: false, error: '❌ Tipo de registro inválido. Debe ser gasto, ingreso, transferencia o inversión.' };
   }
 
   // Validar monto
@@ -73,6 +76,76 @@ function validateData(data) {
     }
 
     // Para transferencias, no validar categorías (pueden ser genéricas)
+  } else if (data.tipo === 'inversión') {
+    // Validar categoría de inversiones
+    if (!Object.keys(investment_categories).includes(data.categoria)) {
+      logError('validateData', new Error('Categoría inválida para inversiones'), {
+        category: data.categoria,
+        validCategories: Object.keys(investment_categories),
+        type: data.tipo
+      });
+      return { valid: false, error: '❌ Categoría inválida para inversiones.' };
+    }
+
+    // Validar subcategoría
+    if (!investment_categories[data.categoria].includes(data.subcategoria)) {
+      logError('validateData', new Error('Subcategoría inválida para la categoría seleccionada en inversiones'), {
+        category: data.categoria,
+        subcategory: data.subcategoria,
+        validSubcategories: investment_categories[data.categoria],
+        type: data.tipo
+      });
+      return { valid: false, error: '❌ Subcategoría inválida para la categoría seleccionada en inversiones.' };
+    }
+
+    // Validar formato de subcategoría
+    if (!validateSubcategoryFormat(data.categoria, data.subcategoria)) {
+      logError('validateData', new Error('Formato de subcategoría inválido - debe ser "Categoría > Subcategoría" y coincidir con la categoría'), {
+        category: data.categoria,
+        subcategory: data.subcategoria,
+        expectedFormat: `${data.categoria} > [subcategoría]`
+      });
+      return { valid: false, error: '❌ Formato de subcategoría inválido. Debe ser "Categoría > Subcategoría" y coincidir con la categoría.' };
+    }
+
+    // Validar activo
+    if (!data.activo || data.activo.trim() === '') {
+      logError('validateData', new Error('Activo vacío'), { activo: data.activo });
+      return { valid: false, error: '❌ El activo no puede estar vacío.' };
+    }
+
+    // Validar cantidad
+    if (isNaN(parseFloat(data.cantidad)) || parseFloat(data.cantidad) <= 0) {
+      logError('validateData', new Error('Cantidad inválida - debe ser un número positivo'), { cantidad: data.cantidad });
+      return { valid: false, error: '❌ Cantidad inválida. Debe ser un número positivo.' };
+    }
+
+    // Validar precio_unitario
+    if (isNaN(parseFloat(data.precio_unitario)) || parseFloat(data.precio_unitario) <= 0) {
+      logError('validateData', new Error('Precio unitario inválido - debe ser un número positivo'), { precio_unitario: data.precio_unitario });
+      return { valid: false, error: '❌ Precio unitario inválido. Debe ser un número positivo.' };
+    }
+
+    // Validar que monto = cantidad * precio_unitario (negativo)
+    const expectedMonto = -parseFloat(data.cantidad) * parseFloat(data.precio_unitario);
+    if (Math.abs(parseFloat(data.monto) - expectedMonto) > 0.01) {
+      logError('validateData', new Error('Monto no coincide con cantidad * precio_unitario'), {
+        monto: data.monto,
+        expected: expectedMonto,
+        cantidad: data.cantidad,
+        precio_unitario: data.precio_unitario
+      });
+      return { valid: false, error: '❌ El monto no coincide con cantidad * precio_unitario.' };
+    }
+
+    // Validar cuenta
+    if (!accounts.includes(data.cuenta) && data.cuenta !== 'No definido') {
+      logError('validateData', new Error('Cuenta inválida'), {
+        account: data.cuenta,
+        validAccounts: accounts
+      });
+      return { valid: false, error: '❌ Cuenta inválida.' };
+    }
   } else {
     // Para gastos e ingresos, validar categorías
     let categories;
@@ -194,13 +267,14 @@ function validateSubcategoryFormat(category, subcategory) {
  * @return {Object} Información detallada del error
  */
 function getValidationErrorDetails(data) {
-  const { expense_categories, income_categories, accounts } = CONFIG.loadConfigData();
+  const { expense_categories, income_categories, investment_categories, accounts } = CONFIG.loadConfigData();
   
   return {
     receivedData: data,
     availableAccounts: accounts,
     availableExpenseCategories: Object.keys(expense_categories),
     availableIncomeCategories: Object.keys(income_categories),
+    availableInvestmentCategories: Object.keys(investment_categories),
     timestamp: new Date().toISOString()
   };
 }

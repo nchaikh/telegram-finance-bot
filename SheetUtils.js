@@ -28,6 +28,7 @@ function logToExpenseSheet(data, timestamp) {
     // Determinar el tipo de registro en la columna I
     const recordType = data.tipo === 'gasto' ? 'Gastos' : 
                       data.tipo === 'ingreso' ? 'Ingresos' : 
+                      data.tipo === 'inversión' ? 'Inversiones' :
                       'Transferencias';
 
     // Manejar según el tipo de registro
@@ -65,16 +66,16 @@ function createTransferRecords(sheet, data, baseDate, recordType) {
   
   // Registro negativo para cuenta origen
   const lastRow1 = sheet.getLastRow() + 1;
-  sheet.getRange(lastRow1, 1, 1, 10).setValues([
+  sheet.getRange(lastRow1, 1, 1, 13).setValues([
     [formattedDate, -amount, data.cuenta, "", "", 
-     `Transferencia a ${data.cuenta_destino}`, "", -amount, recordType, "ARS"]
+     `Transferencia a ${data.cuenta_destino}`, "", -amount, recordType, "ARS", "", "", ""]
   ]);
   
   // Registro positivo para cuenta destino
   const lastRow2 = sheet.getLastRow() + 1;
-  sheet.getRange(lastRow2, 1, 1, 10).setValues([
+  sheet.getRange(lastRow2, 1, 1, 13).setValues([
     [formattedDate, amount, data.cuenta_destino, "", "", 
-     `Transferencia de ${data.cuenta}`, "", amount, recordType, "ARS"]
+     `Transferencia de ${data.cuenta}`, "", amount, recordType, "ARS", "", "", ""]
   ]);
 }
 
@@ -100,9 +101,9 @@ function createInstallmentRecords(sheet, data, baseDate, recordType) {
     const description = `${data.descripcion} (Cuota ${i + 1}/${installments})`;
 
     const lastRow = sheet.getLastRow() + 1;
-    sheet.getRange(lastRow, 1, 1, 10).setValues([
+    sheet.getRange(lastRow, 1, 1, 13).setValues([
       [formattedDate, -monthlyAmount, data.cuenta, data.categoria, data.subcategoria,
-       description, "", -monthlyAmount, recordType, "ARS"]
+       description, "", -monthlyAmount, recordType, "ARS", "", "", ""]
     ]);
   }
 }
@@ -125,9 +126,10 @@ function createSimpleRecord(sheet, data, baseDate, recordType) {
   // Los ingresos quedan positivos
   
   const lastRow = sheet.getLastRow() + 1;
-  sheet.getRange(lastRow, 1, 1, 10).setValues([
+  sheet.getRange(lastRow, 1, 1, 13).setValues([
     [formattedDate, amount, data.cuenta, data.categoria, data.subcategoria, 
-     data.descripcion, "", amount, recordType, "ARS"]
+     data.descripcion, "", amount, recordType, "ARS", 
+     data.activo || "", data.cantidad || "", data.precio_unitario || ""]
   ]);
 }
 
