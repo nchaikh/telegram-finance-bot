@@ -68,16 +68,16 @@ This repository contains the code for a Telegram bot that helps manage your pers
 
 4. The "Registros" sheet will store all financial records with the following structure:
    - Date
-   - Amount (negative for expenses/investments, positive for income and transfers)
+   - Amount (negative for expenses/investments, positive for income, transfers, and sales)
    - Account (source account)
    - Category
    - Subcategory
    - Description
-   - Type (gasto/ingreso/transferencia/inversión)
+   - Type (gasto/ingreso/transferencia/inversión/venta_inversión)
    - Additional data fields and formulas for reporting
-   - Asset (for investments)
-   - Quantity (for investments)
-   - Unit Price (for investments)
+   - Asset (for investments and sales)
+   - Quantity (for investments and sales)
+   - Unit Price (for investments and sales)
 
 ### 5. Deploy the Script
 
@@ -112,6 +112,7 @@ Open Telegram and start a chat with your bot. The bot is restricted to your chat
   - Income: "Received 5000 salary from work in bank account", "Got 50 from freelance project in cash"
   - Transfers: "Transferred 2000 from savings to checking account"
   - Investments: "Bought 10 shares of AAPL at $150 each in Broker account", "Invested 1000 in bonds at $1000 total in Investment account"
+  - Sales: "Sold 5 shares of AAPL at $160 each in Broker account", "Sold 200 bonds at $1100 total in Investment account"
 
 - **Interactive Confirmations**:
   After processing your message, the bot will show a confirmation with three options:

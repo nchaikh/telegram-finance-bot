@@ -18,7 +18,7 @@ function processTextWithGemini(text, customPrompt) {
 Analiza el siguiente mensaje para extraer información financiera.
 
 ### INFORMACIÓN A EXTRAER:
-- **tipo**: "gasto", "ingreso", "transferencia", o "inversión"
+- **tipo**: "gasto", "ingreso", "transferencia", "inversión", o "venta_inversión"
 - **monto**: número positivo (sin símbolos de moneda)
 - **descripcion**: descripción del movimiento
 - **categoria**: categoría principal
@@ -27,9 +27,9 @@ Analiza el siguiente mensaje para extraer información financiera.
 - **cuenta_destino**: (solo transferencias)
 - **fecha**: formato dd/MM/yyyy
 - **cuotas**: número de cuotas (opcional: solo si se menciona)
-- **activo**: nombre del activo (solo para inversiones)
-- **cantidad**: número de unidades (solo para inversiones)
-- **precio_unitario**: precio por unidad (solo para inversiones)
+- **activo**: nombre del activo (solo para inversiones y ventas)
+- **cantidad**: número de unidades (solo para inversiones y ventas)
+- **precio_unitario**: precio por unidad (solo para inversiones y ventas)
 
 ### REGLAS DE FECHA:
 - Si no se menciona fecha, poner la fecha actual: ${currentDateString}.
@@ -62,7 +62,9 @@ ${Object.entries(investment_categories).map(([cat, subcats]) =>
 ### REGLAS DE INVERSIONES:
 - Si es inversión, incluir activo, cantidad, precio_unitario
 - Monto = cantidad * precio_unitario (siempre negativo para compras)
-- Si no es inversión → no incluir activo, cantidad, precio_unitario
+- Si es venta_inversión, incluir activo, cantidad, precio_unitario
+- Monto = cantidad * precio_unitario (siempre positivo para ventas)
+- Si no es inversión o venta → no incluir activo, cantidad, precio_unitario
 
 ### FORMATO DE SUBCATEGORÍA:
 - La subcategoría debe devolverse en formato "Categoría > Subcategoría"
@@ -145,8 +147,8 @@ function processAudioWithGemini(audioBlob, mimeType, customPrompt) {
 Analiza el mensaje de voz para extraer información de registro financiero.
 
 ### INFORMACIÓN A EXTRAER:
-- **tipo**: "gasto", "ingreso", "transferencia", o "inversión"
-- **monto**: número positivo (sin símbolos de moneda)
+- **tipo**: "gasto", "ingreso", "transferencia", "inversión", o "venta_inversión"
+- **monto**: número positivo (ignorar símbolos de moneda)
 - **descripcion**: descripción del movimiento
 - **categoria**: categoría principal
 - **subcategoria**: formato "Categoría > Subcategoría"
@@ -154,9 +156,9 @@ Analiza el mensaje de voz para extraer información de registro financiero.
 - **cuenta_destino**: (solo transferencias)
 - **fecha**: formato dd/MM/yyyy
 - **cuotas**: número de cuotas (opcional: solo si se menciona)
-- **activo**: nombre del activo (solo para inversiones)
-- **cantidad**: número de unidades (solo para inversiones)
-- **precio_unitario**: precio por unidad (solo para inversiones)
+- **activo**: nombre del activo (solo para inversiones y ventas)
+- **cantidad**: número de unidades (solo para inversiones y ventas)
+- **precio_unitario**: precio por unidad (solo para inversiones y ventas)
 
 ### REGLAS DE FECHA:
 - Si no se menciona fecha, poner la fecha actual: ${currentDateString}.
@@ -189,7 +191,9 @@ ${Object.entries(investment_categories).map(([cat, subcats]) =>
 ### REGLAS DE INVERSIONES:
 - Si es inversión, incluir activo, cantidad, precio_unitario
 - Monto = cantidad * precio_unitario (siempre negativo para compras)
-- Si no es inversión → no incluir activo, cantidad, precio_unitario
+- Si es venta_inversión, incluir activo, cantidad, precio_unitario
+- Monto = cantidad * precio_unitario (siempre positivo para ventas)
+- Si no es inversión o venta → no incluir activo, cantidad, precio_unitario
 
 ### FORMATO DE SUBCATEGORÍA:
 - La subcategoría debe devolverse en formato "Categoría > Subcategoría"

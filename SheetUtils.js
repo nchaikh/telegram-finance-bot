@@ -29,6 +29,7 @@ function logToExpenseSheet(data, timestamp) {
     const recordType = data.tipo === 'gasto' ? 'Gastos' : 
                       data.tipo === 'ingreso' ? 'Ingresos' : 
                       data.tipo === 'inversión' ? 'Inversiones' :
+                      data.tipo === 'venta_inversión' ? 'Inversiones' :
                       'Transferencias';
 
     // Manejar según el tipo de registro
@@ -120,10 +121,10 @@ function createSimpleRecord(sheet, data, baseDate, recordType) {
   
   // Determinar el signo del monto según el tipo
   let amount = Math.abs(data.monto);
-  if (data.tipo === 'gasto') {
-    amount = -amount; // Gastos son negativos
+  if (data.tipo === 'gasto' || data.tipo === 'inversión') {
+    amount = -amount; // Gastos e inversiones son negativos
   }
-  // Los ingresos quedan positivos
+  // Ingresos y ventas_inversión quedan positivos
   
   const lastRow = sheet.getLastRow() + 1;
   sheet.getRange(lastRow, 1, 1, 13).setValues([
